@@ -46,7 +46,7 @@ SemaphoreHandle_t ETH_TransmitFrame_Semaphore;
 /** @defgroup ETH_Private_Functions ETH Private Functions
   * @{
   */
-static void ETH_MACDMAConfig(ETH_HandleTypeDef *heth, uint32_t err);
+static void ETH_MACDMAConfig(ETH_HandleTypeDef *heth);
 static void ETH_MACAddressConfig(uint32_t MacAddr, uint8_t *Addr);
 static void ETH_MACReceptionEnable(void);
 static void ETH_MACReceptionDisable(void);
@@ -92,8 +92,6 @@ static void ETH_FlushTransmitFIFO(void);
 void LL_ETH_Init(ETH_HandleTypeDef *heth)
 {
     uint32_t tmpreg1 = 0U, phyreg = 0U;
-
-    uint32_t err = ETH_SUCCESS;
 
     /* Allocate lock resource and initialize it */
     //heth->Lock
@@ -184,7 +182,7 @@ void LL_ETH_Init(ETH_HandleTypeDef *heth)
     }
 
     /* Config MAC and DMA */
-    ETH_MACDMAConfig(heth, err);
+    ETH_MACDMAConfig(heth);
 
     /* Set ETH HAL State to Ready */
 
@@ -976,20 +974,11 @@ void LL_ETH_ConfigDMA(ETH_HandleTypeDef *heth, ETH_DMAInitTypeDef *dmaconf)
   * @param  err Ethernet Init error
   * @retval HAL status
   */
-static void ETH_MACDMAConfig(ETH_HandleTypeDef *heth, uint32_t err)
+static void ETH_MACDMAConfig(ETH_HandleTypeDef *heth)
 {
     ETH_MACInitTypeDef macinit;
     ETH_DMAInitTypeDef dmainit;
     uint32_t tmpreg1 = 0U;
-
-    if (err != ETH_SUCCESS) /* Auto-negotiation failed */
-    {
-        /* Set Ethernet duplex mode to Full-duplex */
-        (heth->Init).DuplexMode = ETH_MODE_FULLDUPLEX;
-
-        /* Set Ethernet speed to 100M */
-        (heth->Init).Speed = ETH_SPEED_100M;
-    }
 
     /* Ethernet MAC default initialization **************************************/
     macinit.Watchdog = ETH_WATCHDOG_ENABLE;
