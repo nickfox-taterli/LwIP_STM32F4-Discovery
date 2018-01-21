@@ -345,25 +345,19 @@ void LL_ETH_TransmitFrame(ETH_HandleTypeDef *heth, uint32_t FrameLength)
 {
     uint32_t bufcount = 0U, size = 0U, i = 0U;
 
-    /* Process Locked */
-    xSemaphoreTake(ETH_TransmitFrame_Semaphore, portMAX_DELAY);
-
     if (FrameLength == 0U)
     {
-        /* Process Unlocked */
-        xSemaphoreGive(ETH_TransmitFrame_Semaphore);
-
         return;
     }
 
     /* Check if the descriptor is owned by the ETHERNET DMA (when set) or CPU (when reset) */
     if(((heth->TxDesc)->Status & ETH_DMATXDESC_OWN) != (uint32_t)RESET)
     {
-        /* Process Unlocked */
-        xSemaphoreGive(ETH_TransmitFrame_Semaphore);
-
         return;
     }
+
+    /* Process Locked */
+    xSemaphoreTake(ETH_TransmitFrame_Semaphore, portMAX_DELAY);
 
     /* Get the number of needed Tx buffers for the current frame */
     if (FrameLength > ETH_TX_BUF_SIZE)
