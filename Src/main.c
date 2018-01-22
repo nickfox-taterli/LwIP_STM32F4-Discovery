@@ -23,6 +23,7 @@
 
 #include "udp_tcp_echo.h"
 #include "http_server.h"
+#include "iperf.h"
 
 void SystemClock_Config(void)
 {
@@ -78,6 +79,7 @@ void MainTask(void const * argument)
   xTaskCreate(udpecho_thread, "udpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,UDPECHO_THREAD_PRIO,NULL);
   xTaskCreate(tcpecho_thread, "tcpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,TCPECHO_THREAD_PRIO,NULL);
   xTaskCreate(http_server_socket_thread,"httpd_thread",DEFAULT_THREAD_STACKSIZE * 2,NULL,WEBSERVER_THREAD_PRIO,NULL);
+	xTaskCreate(iperf_thread,"iperf_thread",DEFAULT_THREAD_STACKSIZE,NULL,WEBSERVER_THREAD_PRIO,NULL);
 	
   for(;;)
   {
