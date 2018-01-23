@@ -48,7 +48,7 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>ETH04\</OutputDirectory>
+          <OutputDirectory>LwIP_STM32F4\</OutputDirectory>
           <OutputName>LwIP_HTTP_UDPTCP_RTOS</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>

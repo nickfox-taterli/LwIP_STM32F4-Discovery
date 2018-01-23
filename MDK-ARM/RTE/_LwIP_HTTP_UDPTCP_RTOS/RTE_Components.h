@@ -3,7 +3,7 @@
  * Auto generated Run-Time-Environment Component Configuration File
  *      *** Do not modify ! ***
  *
- * Project: 'ETH04' 
+ * Project: 'LwIP_STM32F4' 
  * Target:  'LwIP_HTTP_UDPTCP_RTOS' 
  */
 

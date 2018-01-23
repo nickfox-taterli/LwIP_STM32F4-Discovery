@@ -55,21 +55,6 @@
 
 #include <string.h>
 
-#if defined(__CC_ARM)
-size_t strnlen(const char *s, size_t maxlen)
-{
-	size_t len;
- 
-	for (len = 0; len < maxlen; len++, s++)
-	{
-		if (!*s)
-			break;
-	}
-	
-  return (len);
-}
-#endif
-
 /* public (non-static) constants */
 /** SNMP community string */
 const char *snmp_community = SNMP_COMMUNITY;
@@ -915,7 +900,7 @@ snmp_parse_inbound_frame(struct snmp_request *request)
       /* unsupported input PDU for this agent (no parse error) */
       LWIP_DEBUGF(SNMP_DEBUG, ("Unknown/Invalid SNMP PDU type received: %d", tlv.type)); \
       return ERR_ARG;
-      /* break; // statement is unreachable */
+      break;
   }
   request->request_type = tlv.type & SNMP_ASN1_DATATYPE_MASK;
 
@@ -1670,7 +1655,7 @@ snmp_vb_enumerator_get_next(struct snmp_varbind_enumerator* enumerator, struct s
         break;
       default:
         VB_PARSE_ASSERT(0);
-        /* break; // statement is unreachable */
+        break;
     }
   } else {
     snmp_pbuf_stream_seek(&(enumerator->pbuf_stream), tlv.value_len);
