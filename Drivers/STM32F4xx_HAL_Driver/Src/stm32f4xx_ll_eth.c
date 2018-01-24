@@ -498,12 +498,13 @@ uint8_t LL_ETH_GetReceivedFrame_IT(ETH_HandleTypeDef *heth)
     /* Scan descriptors owned by CPU */
     while (((heth->RxDesc->Status & ETH_DMARXDESC_OWN) == (uint32_t)RESET) && (descriptorscancounter < ETH_RXBUFNB))
     {
-        /* Just for security */
+			/* 防止缓冲区溢出 */
         descriptorscancounter++;
 
         /* Check if first segment in frame */
         /* ((heth->RxDesc->Status & ETH_DMARXDESC_FS) != (uint32_t)RESET) && ((heth->RxDesc->Status & ETH_DMARXDESC_LS) == (uint32_t)RESET)) */
-        if((heth->RxDesc->Status & (ETH_DMARXDESC_FS | ETH_DMARXDESC_LS)) == (uint32_t)ETH_DMARXDESC_FS)
+			  /* 他只是第一帧,不同时是最后帧,所以就是有后续帧. */
+			  if((heth->RxDesc->Status & (ETH_DMARXDESC_FS | ETH_DMARXDESC_LS)) == (uint32_t)ETH_DMARXDESC_FS)
         {
             heth->RxFrameInfos.FSRxDesc = heth->RxDesc;
             heth->RxFrameInfos.SegCount = 1U;
@@ -512,35 +513,38 @@ uint8_t LL_ETH_GetReceivedFrame_IT(ETH_HandleTypeDef *heth)
         }
         /* Check if intermediate segment */
         /* ((heth->RxDesc->Status & ETH_DMARXDESC_LS) == (uint32_t)RESET)&& ((heth->RxDesc->Status & ETH_DMARXDESC_FS) == (uint32_t)RESET)) */
-        else if ((heth->RxDesc->Status & (ETH_DMARXDESC_LS | ETH_DMARXDESC_FS)) == (uint32_t)RESET)
+        /* 不是第一帧也不是最后帧,就是中间帧. */
+				else if ((heth->RxDesc->Status & (ETH_DMARXDESC_LS | ETH_DMARXDESC_FS)) == (uint32_t)RESET)
         {
             /* Increment segment count */
             (heth->RxFrameInfos.SegCount)++;
             /* Point to next descriptor */
             heth->RxDesc = (ETH_DMADescTypeDef *)(heth->RxDesc->Buffer2NextDescAddr);
         }
+				/* 前面排除了所有情况.这是最后帧.或者是第一帧最后帧都为同一帧.收到有末帧,才是真正的OK. */
         /* Should be last segment */
         else
         {
-            /* Last segment */
+            /* 末帧 */
             heth->RxFrameInfos.LSRxDesc = heth->RxDesc;
 
-            /* Increment segment count */
+            /* 最后一帧也是帧啊./ */
             (heth->RxFrameInfos.SegCount)++;
 
-            /* Check if last segment is first segment: one segment contains the frame */
+					/* 只有1帧,就是首帧和末帧是一个. */
             if ((heth->RxFrameInfos.SegCount) == 1U)
             {
+							/* 首帧和末帧是一个. */
                 heth->RxFrameInfos.FSRxDesc = heth->RxDesc;
             }
 
-            /* Get the Frame Length of the received packet: substruct 4 bytes of the CRC */
+            /* 去掉4字节的CRC,就是真正的长度.这里提示的是接收长度. */
             heth->RxFrameInfos.length = (((heth->RxDesc)->Status & ETH_DMARXDESC_FL) >> ETH_DMARXDESC_FRAMELENGTHSHIFT) - 4U;
 
-            /* Get the address of the buffer start address */
+            /* 缓冲区的第一个缓冲区.(首帧) */
             heth->RxFrameInfos.buffer = ((heth->RxFrameInfos).FSRxDesc)->Buffer1Addr;
 
-            /* Point to next descriptor */
+            /* 指向下一个缓冲区.等下次接收时候从下一个来. */
             heth->RxDesc = (ETH_DMADescTypeDef *) (heth->RxDesc->Buffer2NextDescAddr);
             return 0;
         }
