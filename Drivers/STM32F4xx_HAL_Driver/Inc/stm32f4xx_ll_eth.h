@@ -1448,9 +1448,9 @@ void LL_ETH_ReadPHYRegister(ETH_HandleTypeDef *heth, uint16_t PHYReg, uint32_t *
 void LL_ETH_WritePHYRegister(ETH_HandleTypeDef *heth, uint16_t PHYReg, uint32_t RegValue);
 /* Non-Blocking mode: Interrupt */
 uint8_t LL_ETH_GetReceivedFrame_IT(ETH_HandleTypeDef *heth);
-void LL_ETH_IRQHandler(void);
 /* Callback in non blocking modes (Interrupt) */
 void LL_ETH_RxCpltCallback(void);
+void ETH_IRQHandler(void); /* 节省了一次函数调用. */
 /**
   * @}
   */

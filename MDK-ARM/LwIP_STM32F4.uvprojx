@@ -541,11 +541,6 @@
               <FilePath>../Src/main.c</FilePath>
             </File>
             <File>
-              <FileName>freertos.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Src/freertos.c</FilePath>
-            </File>
-            <File>
               <FileName>lwip.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/lwip.c</FilePath>
@@ -654,11 +649,6 @@
               <FileName>def.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Middlewares/Third_Party/LwIP/src/core/def.c</FilePath>
-            </File>
-            <File>
-              <FileName>slipif.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Middlewares/Third_Party/LwIP/src/netif/slipif.c</FilePath>
             </File>
             <File>
               <FileName>ip4_frag.c</FileName>

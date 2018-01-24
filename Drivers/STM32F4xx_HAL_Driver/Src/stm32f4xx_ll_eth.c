@@ -21,6 +21,8 @@
 /** @addtogroup STM32F4xx_LL_Driver
   * @{
   */
+	
+/* 大多数情况下,首帧 = 末帧,包特大,比如下载,会出现其他情况. */
 
 /** @defgroup ETH ETH
   * @brief ETH HAL module driver
@@ -558,7 +560,7 @@ uint8_t LL_ETH_GetReceivedFrame_IT(ETH_HandleTypeDef *heth)
   *         the configuration information for ETHERNET module
   * @retval HAL status
   */
-void LL_ETH_IRQHandler(void)
+void ETH_IRQHandler(void)
 {
     /* Frame received */
     if((ETH->DMASR & ( ETH_DMA_FLAG_R)) == ( ETH_DMA_FLAG_R))

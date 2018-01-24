@@ -146,11 +146,12 @@
 /*----- Value in opt.h for CHECKSUM_CHECK_ICMP6: 1 -----*/
 #define CHECKSUM_CHECK_ICMP6 0
 /*-----------------------------------------------------------------------------*/
-/* USER CODE BEGIN 1 */
-#define HTTPD_USE_CUSTOM_FSDATA   1
+/* 切换是否使用默认FSDATA,还是STM32的FSDATA.不过,默认的我打不开啊. */
+#define HTTPD_USE_CUSTOM_FSDATA   1 
+/* SOCKET支持 */
 #define LWIP_SOCKET               1
 #define LWIP_NETCONN              1
-/* USER CODE END 1 */
+#define LWIP_NETIF_HOSTNAME				1
 
 #ifdef __cplusplus
 }
