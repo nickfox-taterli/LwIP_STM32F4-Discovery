@@ -166,12 +166,12 @@ static void low_level_init(struct netif *netif)
     uint8_t MACAddr[6] ;
 
     heth.Init.PhyAddress = 1;
-    MACAddr[0] = 0x00;
-    MACAddr[1] = 0x80;
-    MACAddr[2] = 0xE1; /* OUI是ST的. */
-    MACAddr[3] = 0x00;
-    MACAddr[4] = 0x00;
-    MACAddr[5] = 0x00;
+    MACAddr[0] = 0xB8;
+    MACAddr[1] = 0x27;
+    MACAddr[2] = 0xEB; /* 偷窃树莓派的MAC */
+    MACAddr[3] = 0x10;
+    MACAddr[4] = 0x20;
+    MACAddr[5] = 0x30;
     heth.Init.MACAddr = &MACAddr[0];
 
     LL_ETH_Init(&heth);
@@ -400,7 +400,7 @@ void ethernetif_input( void const *argument )
                 p = low_level_input( netif );
                 if   (p != NULL)
                 {
-                    /* 由LwIP来分析pbuf. */
+										/* 由LwIP来分析pbuf.这个实际上是tcpip_input函数 */
                     if (netif->input( p, netif) != ERR_OK )
                     {
                         /* 用完要清理. */
@@ -436,7 +436,7 @@ err_t ethernetif_init(struct netif *netif)
 
 #if LWIP_NETIF_HOSTNAME
     /* 主机名 */
-    netif->hostname = "lwip";
+    netif->hostname = "raspberrypi";
 #endif /* LWIP_NETIF_HOSTNAME */
 
     netif->name[0] = IFNAME0;

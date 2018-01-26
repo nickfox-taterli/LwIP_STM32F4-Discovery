@@ -126,25 +126,25 @@
 /*----- Value in opt.h for MIB2_STATS: 0 or SNMP_LWIP_MIB2 -----*/
 #define MIB2_STATS 0
 /*----- Value in opt.h for CHECKSUM_GEN_IP: 1 -----*/
-#define CHECKSUM_GEN_IP 0
+#define CHECKSUM_GEN_IP 1
 /*----- Value in opt.h for CHECKSUM_GEN_UDP: 1 -----*/
-#define CHECKSUM_GEN_UDP 0
+#define CHECKSUM_GEN_UDP 1
 /*----- Value in opt.h for CHECKSUM_GEN_TCP: 1 -----*/
-#define CHECKSUM_GEN_TCP 0
+#define CHECKSUM_GEN_TCP 1
 /*----- Value in opt.h for CHECKSUM_GEN_ICMP: 1 -----*/
-#define CHECKSUM_GEN_ICMP 0
+#define CHECKSUM_GEN_ICMP 1
 /*----- Value in opt.h for CHECKSUM_GEN_ICMP6: 1 -----*/
-#define CHECKSUM_GEN_ICMP6 0
+#define CHECKSUM_GEN_ICMP6 1
 /*----- Value in opt.h for CHECKSUM_CHECK_IP: 1 -----*/
-#define CHECKSUM_CHECK_IP 0
+#define CHECKSUM_CHECK_IP 1
 /*----- Value in opt.h for CHECKSUM_CHECK_UDP: 1 -----*/
-#define CHECKSUM_CHECK_UDP 0
+#define CHECKSUM_CHECK_UDP 1
 /*----- Value in opt.h for CHECKSUM_CHECK_TCP: 1 -----*/
-#define CHECKSUM_CHECK_TCP 0
+#define CHECKSUM_CHECK_TCP 1
 /*----- Value in opt.h for CHECKSUM_CHECK_ICMP: 1 -----*/
-#define CHECKSUM_CHECK_ICMP 0
+#define CHECKSUM_CHECK_ICMP 1
 /*----- Value in opt.h for CHECKSUM_CHECK_ICMP6: 1 -----*/
-#define CHECKSUM_CHECK_ICMP6 0
+#define CHECKSUM_CHECK_ICMP6 1
 /*-----------------------------------------------------------------------------*/
 /* 切换是否使用默认FSDATA,还是STM32的FSDATA.不过,默认的我打不开啊. */
 #define HTTPD_USE_CUSTOM_FSDATA   1 
@@ -152,6 +152,9 @@
 #define LWIP_SOCKET               1
 #define LWIP_NETCONN              1
 #define LWIP_NETIF_HOSTNAME				1
+#define LWIP_SO_RCVTIMEO					1
+#define LWIP_SO_SNDTIMEO					1
+#define LWIP_CHECKSUM_ON_COPY			1
 
 #ifdef __cplusplus
 }

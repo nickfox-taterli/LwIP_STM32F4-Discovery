@@ -20,7 +20,7 @@ void MX_LWIP_Init(void)
   netmask.addr = 0;
   gw.addr = 0;
 
-  /* 增加一个网络接口,ethernetif_init是底层初始化,tcpip_input是协议栈入口,这个有点复杂. */
+  /* 增加一个网络接口,ethernetif_init是底层初始化,tcpip_input是协议栈入口,这个有点复杂.在ethernetif.c中调用ethernetif_input,这个来调用netif->input,最后引用了tcpip_input函数. */
   netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
 
   /* 注册默认网络接口. */

@@ -1095,7 +1095,7 @@
  * LWIP_UDPLITE==1: Turn on UDP-Lite. (Requires LWIP_UDP)
  */
 #if !defined LWIP_UDPLITE || defined __DOXYGEN__
-#define LWIP_UDPLITE                    0
+#define LWIP_UDPLITE                    1
 #endif
 
 /**
