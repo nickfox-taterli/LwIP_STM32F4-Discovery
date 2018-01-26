@@ -400,7 +400,7 @@ void ethernetif_input( void const *argument )
                 p = low_level_input( netif );
                 if   (p != NULL)
                 {
-										/* 由LwIP来分析pbuf.这个实际上是tcpip_input函数 */
+                    /* 由LwIP来分析pbuf.这个实际上是tcpip_input函数 */
                     if (netif->input( p, netif) != ERR_OK )
                     {
                         /* 用完要清理. */
