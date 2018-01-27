@@ -11,9 +11,11 @@ void udpecho_thread(void *arg)
     struct netbuf *udpbuf;
     struct netbuf *recv_udpbuf;
     ip_addr_t udpaddr;
-    uint8_t udpdemo_buf[5] = {0xAA, 0x55, 0xFF, 0x5A, 0xA5};
+    uint8_t udpdemo_buf[18] = {
+			0xAA, 0x55, 0xFF, 0x5A, 0xA5,0xAA, 0x55, 0xFF, 0x5A, 0xA5,
+			0xAA, 0x55, 0xFF, 0x5A, 0xA5,0xAA, 0x55, 0xFF 
+		};
     err_t err;
-    err_t recv_err;
 
     /* 新建一个连接块 */
     udpconn = netconn_new(NETCONN_UDP);
@@ -21,18 +23,17 @@ void udpecho_thread(void *arg)
     if (udpconn != NULL) /* 间接申请了内存 */
     {
         /* 绑定本地所有地址(开发板是本地) */
-        err = netconn_bind(udpconn, IP_ADDR_ANY, 7001);
-        /* 写目标地址 */
+        err = netconn_bind(udpconn, IP_ADDR_ANY, 49152);
+				/* 写目标地址 */
         IP4_ADDR(&udpaddr, 10, 0, 1, 35);
         /* 连接目标端口,UDP是无状态协议,肯定能连接成功的. */
-        netconn_connect(udpconn, &udpaddr, 7800);
+        netconn_connect(udpconn, &udpaddr, 49152);
+			
         if (err == ERR_OK)
         {
             while (1)
             {
-
-                recv_err = netconn_recv(udpconn, &recv_udpbuf);
-                if (recv_err == ERR_OK)
+                while (netconn_recv(udpconn, &recv_udpbuf) == ERR_OK)
                 {
                     if(recv_udpbuf->p->len >= 1)  udpdemo_buf[4] = ((uint8_t *)recv_udpbuf->p->payload)[0];
                     netbuf_delete(recv_udpbuf);
@@ -128,7 +129,6 @@ void udplite_thread(void *arg)
     struct netbuf *udpbuf;
     ip_addr_t udpaddr;
     uint8_t udpdemo_buf[5] = {0xAA, 0x55, 0xFF, 0x5A, 0xA5};
-    err_t err;
 
     /* 新建一个连接块,根UDP的区别只在这里.但是UDP-Lite属于那种传了不管,也不校验. */
     /* 类似的有NETCONN_UDPNOCHKSUM,但是这个跟Lite的Type不同,主机依然可能因为校验和不对直接丢掉. */
@@ -136,14 +136,10 @@ void udplite_thread(void *arg)
     udpconn = netconn_new(NETCONN_UDPLITE);
     if (udpconn != NULL) /* 间接申请了内存 */
     {
-        /* 绑定本地所有地址(开发板是本地) */
-        err = netconn_bind(udpconn, IP_ADDR_ANY, 7003);
         /* 写目标地址 */
         IP4_ADDR(&udpaddr, 10, 0, 1, 35);
         /* 连接目标端口,UDP是无状态协议,肯定能连接成功的. */
         netconn_connect(udpconn, &udpaddr, 7800);
-        if (err == ERR_OK)
-        {
             while (1)
             {
                 /* UDP 缓冲区申请 */
@@ -155,18 +151,13 @@ void udplite_thread(void *arg)
                 /* payload 其实也可以直接修改. */
                 ((uint32_t *)udpbuf->p->payload)[0] = xTaskGetTickCount();
                 /* 这一步把数据发送出去. */
-                err = netconn_send(udpconn, udpbuf);
+                netconn_send(udpconn, udpbuf);
                 /* UDP总会发成功的. */
                 netbuf_delete(udpbuf);
                 /* 延迟等下一次再发. */
                 vTaskDelay(1000);
             }
-        }
-        else
-        {
-            /* 如果本地地址绑定不了,那么失败. */
-            netconn_delete(udpconn);
-        }
     }
+		 netconn_delete(udpconn);
     vTaskDelete(NULL);
 }

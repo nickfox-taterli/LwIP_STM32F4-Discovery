@@ -236,7 +236,7 @@ udp_input(struct pbuf *p, struct netif *inp)
    * 'Perfect match' pcbs (connected to the remote port & ip address) are
    * preferred. If no perfect match is found, the first unconnected pcb that
    * matches the local port and ip address gets the datagram. */
-  for (pcb = udp_pcbs; pcb != NULL; pcb = pcb->next) {
+  for (pcb = udp_pcbs; pcb != NULL; pcb = pcb->next) {	/* 找到对应的PCB */
     /* print the PCB local and remote address */
     LWIP_DEBUGF(UDP_DEBUG, ("pcb ("));
     ip_addr_debug_print(UDP_DEBUG, &pcb->local_ip);
@@ -285,7 +285,7 @@ udp_input(struct pbuf *p, struct netif *inp)
 
   /* Check checksum if this is a match or if it was directed at us. */
   if (pcb != NULL) {
-    for_us = 1;
+    for_us = 1; /* 有注册PCB,数据包当然是给我们的. */
   } else {
 #if LWIP_IPV6
     if (ip_current_is_v6()) {
@@ -294,7 +294,7 @@ udp_input(struct pbuf *p, struct netif *inp)
 #endif /* LWIP_IPV6 */
 #if LWIP_IPV4
     if (!ip_current_is_v6()) {
-      for_us = ip4_addr_cmp(netif_ip4_addr(inp), ip4_current_dest_addr());
+      for_us = ip4_addr_cmp(netif_ip4_addr(inp), ip4_current_dest_addr()); /* 如果他发到我们别的端口呢? */
     }
 #endif /* LWIP_IPV4 */
   }
@@ -336,7 +336,7 @@ udp_input(struct pbuf *p, struct netif *inp)
       }
     }
 #endif /* CHECKSUM_CHECK_UDP */
-    if (pbuf_header(p, -UDP_HLEN)) {
+    if (pbuf_header(p, -UDP_HLEN)) { /* 去UDP头. */
       /* Can we cope with this failing? Just assert for now */
       LWIP_ASSERT("pbuf_header failed\n", 0);
       UDP_STATS_INC(udp.drop);
@@ -370,7 +370,7 @@ udp_input(struct pbuf *p, struct netif *inp)
                 }
                 q = pbuf_alloc(PBUF_RAW, p->tot_len, PBUF_RAM);
                 if (q != NULL) {
-                  err_t err = pbuf_copy(q, p);
+                  err_t err = pbuf_copy(q, p); /* 数据拷贝 */
                   if (err == ERR_OK) {
                     /* move payload to UDP data */
                     pbuf_header(q, -hdrs_len);
@@ -633,10 +633,10 @@ udp_sendto_if_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *dst_i
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
 #if LWIP_IPV4
   if (ip4_addr_isany(ip_2_ip4(&pcb->local_ip)) ||
-      ip4_addr_ismulticast(ip_2_ip4(&pcb->local_ip))) {
+      ip4_addr_ismulticast(ip_2_ip4(&pcb->local_ip))) { /* 多播 或者 IP_ANY */
     /* if the local_ip is any or multicast
      * use the outgoing network interface IP address as source address */
-    src_ip = netif_ip_addr4(netif);
+    src_ip = netif_ip_addr4(netif); /* 源端IP,发送者的IP. */
   } else {
     /* check if UDP PCB local IP address is correct
      * this could be an old address if netif->ip_addr has changed */
@@ -706,9 +706,9 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
     }
   }
 
-  /* not enough space to add an UDP header to first pbuf in given p chain? */
+  /* pbuf_header是给添加头信息的.如果够空间,返回0,不够返回新的pbuf. */
   if (pbuf_header(p, UDP_HLEN)) {
-    /* allocate header in a separate new pbuf */
+    /* 申请新的pbuf */
     q = pbuf_alloc(PBUF_IP, UDP_HLEN, PBUF_RAM);
     /* new header pbuf could not be allocated? */
     if (q == NULL) {
@@ -716,7 +716,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
       return ERR_MEM;
     }
     if (p->tot_len != 0) {
-      /* chain header q in front of given pbuf p (only if p contains data) */
+      /* 把新的pbuf放到chain里,就是q的next是p.先发q,然后q是个头,发送完q就发p,数据. */
       pbuf_chain(q, p);
     }
     /* first pbuf q points to header pbuf */
@@ -805,7 +805,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
       if (IP_IS_V6(dst_ip) || (pcb->flags & UDP_FLAGS_NOCHKSUM) == 0) {
         u16_t udpchksum;
 #if LWIP_CHECKSUM_ON_COPY
-        if (have_chksum) {
+        if (have_chksum) { /* NETBUF_FLAG_CHKSUM 有效时候这个才有效(在UDP Netconn模式下) */
           u32_t acc;
           udpchksum = ip_chksum_pseudo_partial(q, IP_PROTO_UDP,
             q->tot_len, UDP_HLEN, src_ip, dst_ip);
@@ -838,7 +838,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
 
   LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP checksum 0x%04"X16_F"\n", udphdr->chksum));
   LWIP_DEBUGF(UDP_DEBUG, ("udp_send: ip_output_if (,,,,0x%02"X16_F",)\n", (u16_t)ip_proto));
-  /* output to IP */
+  /* output to IP 输出数据 */
   NETIF_SET_HWADDRHINT(netif, &(pcb->addr_hint));
   err = ip_output_if_src(q, src_ip, dst_ip, ttl, pcb->tos, ip_proto, netif);
   NETIF_SET_HWADDRHINT(netif, NULL);
@@ -911,7 +911,7 @@ udp_bind(struct udp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port)
   }
 
   /* no port specified? */
-  if (port == 0) {
+  if (port == 0) { /* 绑定时可以不指定PORT */
     port = udp_new_port();
     if (port == 0) {
       /* no more ports available in local range */

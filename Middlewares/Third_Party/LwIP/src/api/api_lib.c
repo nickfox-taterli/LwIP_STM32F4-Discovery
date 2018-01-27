@@ -102,6 +102,7 @@ netconn_apimsg(tcpip_callback_fn fn, struct api_msg *apimsg)
   apimsg->op_completed_sem = LWIP_NETCONN_THREAD_SEM_GET();
 #endif /* LWIP_NETCONN_SEM_PER_THREAD */
 
+	/* 等信号量有效,fn就会被调用. */
   err = tcpip_send_msg_wait_sem(fn, apimsg, LWIP_API_MSG_SEM(apimsg));
   if (err == ERR_OK) {
     return apimsg->err;
@@ -113,11 +114,10 @@ netconn_apimsg(tcpip_callback_fn fn, struct api_msg *apimsg)
  * Create a new netconn (of a specific type) that has a callback function.
  * The corresponding pcb is also created.
  *
- * @param t the type of 'connection' to create (@see enum netconn_type)
+ * @param t 连接类型,比如UDP,TCP,UDP-Lite之类的. (@see enum netconn_type)
  * @param proto the IP protocol for RAW IP pcbs
- * @param callback a function to call on status changes (RX available, TX'ed)
- * @return a newly allocated struct netconn or
- *         NULL on memory error
+ * @param 回调函数,比如传输OK,有东西收到了. (RX available, TX'ed)
+ * @return NULL就是申请不到,其他就是申请到的内存地址.
  */
 struct netconn*
 netconn_new_with_proto_and_callback(enum netconn_type t, u8_t proto, netconn_callback callback)
@@ -125,13 +125,14 @@ netconn_new_with_proto_and_callback(enum netconn_type t, u8_t proto, netconn_cal
   struct netconn *conn;
   API_MSG_VAR_DECLARE(msg);
   API_MSG_VAR_ALLOC_RETURN_NULL(msg);
-
+/* 申请内存 */
   conn = netconn_alloc(t, callback);
   if (conn != NULL) {
     err_t err;
 
     API_MSG_VAR_REF(msg).msg.n.proto = proto;
     API_MSG_VAR_REF(msg).conn = conn;
+		/* 使用lwip_netconn_do_newconn处理,就能得到netconn. */
     err = netconn_apimsg(lwip_netconn_do_newconn, &API_MSG_VAR_REF(msg));
     if (err != ERR_OK) {
       LWIP_ASSERT("freeing conn without freeing pcb", conn->pcb.tcp == NULL);

@@ -155,6 +155,7 @@ extern "C" {
 #define LWIP_SO_RCVTIMEO 1
 #define LWIP_SO_SNDTIMEO 1
 #define LWIP_CHECKSUM_ON_COPY 1
+#define ARP_TABLE_SIZE 10
 
 #ifdef __cplusplus
 }

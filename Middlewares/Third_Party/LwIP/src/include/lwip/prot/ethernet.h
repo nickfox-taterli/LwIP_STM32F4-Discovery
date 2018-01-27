@@ -108,7 +108,7 @@ PACK_STRUCT_END
 enum eth_type {
   /** Internet protocol v4 */
   ETHTYPE_IP        = 0x0800U,
-  /** Address resolution protocol */
+  /** Addres/s resolution protocol */
   ETHTYPE_ARP       = 0x0806U, 
   /** Wake on lan */
   ETHTYPE_WOL       = 0x0842U,

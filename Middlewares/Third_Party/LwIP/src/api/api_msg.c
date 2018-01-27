@@ -1122,11 +1122,12 @@ lwip_netconn_do_bind(void *m)
 {
   struct api_msg *msg = (struct api_msg*)m;
 
+	/* 如果conn最后有出错,那么就让他返回错误. */
   if (ERR_IS_FATAL(msg->conn->last_err)) {
     msg->err = msg->conn->last_err;
   } else {
     msg->err = ERR_VAL;
-    if (msg->conn->pcb.tcp != NULL) {
+    if (msg->conn->pcb.tcp != NULL) { /* 确保conn是新建OK的. */
       switch (NETCONNTYPE_GROUP(msg->conn->type)) {
 #if LWIP_RAW
       case NETCONN_RAW:

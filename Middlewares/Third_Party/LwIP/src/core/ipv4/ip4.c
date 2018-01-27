@@ -160,15 +160,18 @@ ip4_route(const ip4_addr_t *dest)
   }
 #endif /* LWIP_MULTICAST_TX_OPTIONS */
 
-  /* iterate through netifs */
+	/* 遍历查找用于发信的网卡 */
   for (netif = netif_list; netif != NULL; netif = netif->next) {
     /* is the netif up, does it have a link and a valid address? */
+		/* 如果网卡活着,并且连接着,IP地址还有效着. */
     if (netif_is_up(netif) && netif_is_link_up(netif) && !ip4_addr_isany_val(*netif_ip4_addr(netif))) {
       /* network mask matches? */
+			/* dest地址和网卡自己地址比对还是OK的,并且网络掩码也刚好符合的.(mask 位宽 >= ip 位宽) */
       if (ip4_addr_netcmp(dest, netif_ip4_addr(netif), netif_ip4_netmask(netif))) {
         /* return netif on which to forward IP packet */
         return netif;
       }
+			/* 或者在P2P网络(没过路由) */
       /* gateway matches on a non broadcast interface? (i.e. peer in a point to point interface) */
       if (((netif->flags & NETIF_FLAG_BROADCAST) == 0) && ip4_addr_cmp(dest, netif_ip4_gw(netif))) {
         /* return netif on which to forward IP packet */
@@ -206,6 +209,7 @@ ip4_route(const ip4_addr_t *dest)
   }
 #endif
 
+	/* 只是调试作用 */
   if ((netif_default == NULL) || !netif_is_up(netif_default) || !netif_is_link_up(netif_default) ||
       ip4_addr_isany_val(*netif_ip4_addr(netif_default))) {
     /* No matching netif found and default netif is not usable.
@@ -952,13 +956,14 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 #endif /* ENABLE_LOOPBACK */
 #if IP_FRAG
   /* don't fragment if interface has mtu set to 0 [loopif] */
+	/* 总长大于一个MTU,就得拆分,ip4_frag就是拆分函数. */
   if (netif->mtu && (p->tot_len > netif->mtu)) {
     return ip4_frag(p, netif, dest);
   }
 #endif /* IP_FRAG */
 
   LWIP_DEBUGF(IP_DEBUG, ("ip4_output_if: call netif->output()\n"));
-  return netif->output(netif, p, dest);
+  return netif->output(netif, p, dest); /* 终于要发送了 */
 }
 
 /**

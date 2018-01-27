@@ -98,7 +98,7 @@ tcpip_thread(void *arg)
     UNLOCK_TCPIP_CORE();
     LWIP_TCPIP_THREAD_ALIVE();
     /* wait for a message, timeouts are processed while waiting */
-    TCPIP_MBOX_FETCH(&mbox, (void **)&msg);
+    TCPIP_MBOX_FETCH(&mbox, (void **)&msg); /* 由tcpip_inpkt解锁  */
     LOCK_TCPIP_CORE();
     if (msg == NULL) {
       LWIP_DEBUGF(TCPIP_DEBUG, ("tcpip_thread: invalid message: NULL\n"));
@@ -121,7 +121,7 @@ tcpip_thread(void *arg)
 #if !LWIP_TCPIP_CORE_LOCKING_INPUT
     case TCPIP_MSG_INPKT:
       LWIP_DEBUGF(TCPIP_DEBUG, ("tcpip_thread: PACKET %p\n", (void *)msg));
-      msg->msg.inp.input_fn(msg->msg.inp.p, msg->msg.inp.netif);
+      msg->msg.inp.input_fn(msg->msg.inp.p, msg->msg.inp.netif); /* 相对于ethernet包,相当于ethernet_input函数. */
       memp_free(MEMP_TCPIP_MSG_INPKT, msg);
       break;
 #endif /* !LWIP_TCPIP_CORE_LOCKING_INPUT */
@@ -330,7 +330,7 @@ tcpip_send_msg_wait_sem(tcpip_callback_fn fn, void *apimsg, sys_sem_t* sem)
 {
 #if LWIP_TCPIP_CORE_LOCKING
   LWIP_UNUSED_ARG(sem);
-  LOCK_TCPIP_CORE();
+  LOCK_TCPIP_CORE(); /* 这是个mutex */
   fn(apimsg);
   UNLOCK_TCPIP_CORE();
   return ERR_OK;
