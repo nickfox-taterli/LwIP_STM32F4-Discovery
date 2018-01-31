@@ -565,16 +565,6 @@
               <FileType>1</FileType>
               <FilePath>..\Demo\Src\udp_tcp_echo.c</FilePath>
             </File>
-            <File>
-              <FileName>http_server.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Demo\Src\http_server.c</FilePath>
-            </File>
-            <File>
-              <FileName>iperf.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Demo\Src\iperf.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -929,26 +919,6 @@
               <FileName>tcp_out.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Middlewares/Third_Party/LwIP/src/core/tcp_out.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>Middlewares/LwIP/Apps</GroupName>
-          <Files>
-            <File>
-              <FileName>fs.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Middlewares\Third_Party\LwIP\apps\httpd\fs.c</FilePath>
-            </File>
-            <File>
-              <FileName>httpd.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Middlewares\Third_Party\LwIP\apps\httpd\httpd.c</FilePath>
-            </File>
-            <File>
-              <FileName>lwiperf.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Middlewares\Third_Party\LwIP\apps\lwiperf\lwiperf.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -3,8 +3,12 @@
 #include "lwip/sys.h"
 #include "lwip/dns.h"
 
+#include "lwip/netif.h"
+
 #include <string.h>
 #include <stdio.h>
+
+extern struct netif gnetif;
 
 void udpecho_thread(void *arg)
 {
@@ -125,84 +129,181 @@ void tcpecho_thread(void *arg)
     vTaskDelete(NULL);
 }
 
+#define HTTP_OK	0
+#define HTTPS_NOT_SUPPORT -1
+#define HTTP_AUTH_NOT_SUPPORT -2
+#define HTTP_SERVER_REFUSE	-3
+#define HTTP_ROUTE_NOT_FOUND	-4
+#define HTTP_OUT_OF_RAM -5
+#define HTTP_NOT_200OK	-6
+#define HTTP_NO_CONTENT -7
 
-#include "lwip/netif.h"
-extern struct netif gnetif;
-err_t err,err_recv;
-uint8_t tcp_client_recvbuf[10240];
+uint8_t *pageBuf;
 
-static const char *REQUEST = "GET /prices/mgets?type=1&skuIds=1379747 HTTP/1.1\r\n"
-"Host: p.3.cn\r\n"
-"User-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n"
-"\r\n";
-
-	uint32_t data_len = 0;
-uint8_t  respon_cnt = 0;
-uint8_t dns_found = 0;
-
-    ip_addr_t remote_ip;
-
-static void found_dns(const char *name, const ip_addr_t *ipaddr, void *callback_arg){	
-}
-
-void tcpget_thread(void *arg)
+int get_webpage(const char *url)
 {
+
+    uint16_t i, j, k;
+    char *server_addr = pvPortMalloc(strlen(url) - 7);
+    char *web_addr = NULL;
+    ip_addr_t server_ip;
     struct netconn *conn;
     struct netbuf *inBuf;
-		struct pbuf *q;
+    struct pbuf *q;
+    char *request = NULL;
+    err_t err;
+    uint16_t recvPos = 0;
+    uint8_t *recvBuf;
 
 
     while(gnetif.ip_addr.addr == 0x00)
     {
-        vTaskDelay(100);
+        return HTTP_ROUTE_NOT_FOUND;
     }
 
-    /* 新建一个连接块 */
-    vTaskDelay(1000);
-    conn = netconn_new(NETCONN_TCP);
-   //IP4_ADDR(&remote_ip, 202,108,35,250);
-	err = dns_gethostbyname("p.3.cn", &remote_ip, found_dns,NULL);
-		while(remote_ip.addr == 0x00){
-			vTaskDelay(100);
-			dns_gethostbyname("p.3.cn", &remote_ip, found_dns,NULL);
-		}
-	//IP4_ADDR(&remote_ip, 10,0,1,35);
-    err = netconn_connect(conn, &remote_ip, 80);
-    //conn->recv_timeout = 3000;
-    if (err == ERR_OK)
+    if(strncmp((const char *)url, "http://", 7) == 0) 		/* 只处理http协议 */
     {
-				while(1){
-					
-				netconn_write(conn, REQUEST, strlen((char *)REQUEST), NETCONN_COPY);
-				inBuf = netbuf_new();
-				conn->recv_timeout = 3000;
-					
-				while((err_recv = netconn_recv(conn,&inBuf)) == ERR_OK)
-				{
-					respon_cnt++;
-					for(q=inBuf->p;q!=NULL;q=q->next)  //遍历完整个pbuf链表
-					{
-						//判断要拷贝到TCP_CLIENT_RX_BUFSIZE中的数据是否大于TCP_CLIENT_RX_BUFSIZE的剩余空间，如果大于
-						//的话就只拷贝TCP_CLIENT_RX_BUFSIZE中剩余长度的数据，否则的话就拷贝所有的数据
-						if(q->len > (10240-data_len)) 
-						{memcpy(tcp_client_recvbuf+data_len,q->payload,(10240-data_len));//拷贝数据
-						}else{
-						memcpy(tcp_client_recvbuf+data_len,q->payload,q->len);
-						}
-						data_len += q->len;  	
-						if(data_len > 10240) break; //超出TCP客户端接收数组,跳出	
-					}
-				}
-				
-				if(inBuf != NULL) netbuf_delete(inBuf);
-				netconn_close(conn);
-				netconn_delete(conn);
-			 conn = netconn_new(NETCONN_TCP);
-				err = netconn_connect(conn, &remote_ip, 80);
-        vTaskDelay(3000);
-			}
+        /* 1)提取服务器部分 */
+        for(i = 4; url[i]; ++i)
+        {
+            if (url[i] == ':' && url[i + 1] == '/' && url[i + 2] == '/')
+            {
+                for (i = i + 3, j = 0; url[i] > 32 && url[i] < 127 && url[i] != '/';
+                        ++i, ++j)
+                {
+                    server_addr[j] = url[i];
+                    if (url[i] == '@') /* 服务器基础认证符号,我们做不了,遇到就错误. */
+                    {
+                        return HTTP_AUTH_NOT_SUPPORT;
+                    }
+                }
+                server_addr[j] = '\0';
+
+                web_addr = pvPortMalloc(strlen(url) - 7 - strlen(server_addr));
+
+                for (k = 7 + j; k < (strlen(url)); k++) /* 后半部分提取 */
+                {
+                    web_addr[k - 7 - j] = url[k];
+                }
+
+                web_addr[k - 7 - j] = 0x20; /* 末尾加截断 */
+
+                while (--j)
+                {
+                    if (server_addr[j] == ':')
+                    {
+                        server_addr[j] = '\0';
+                    }
+                }
+            }
+
+        }
+
+        /* 2)查询IP */
+        netconn_gethostbyname(server_addr, &server_ip);
+
+
+        /* 3)构造访问头 */
+        request = pvPortMalloc(strlen(url) + 128); /* 头所需内存大小. */
+        if(request == NULL) return HTTP_OUT_OF_RAM;
+        sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n12", web_addr, server_addr);
+        vPortFree(web_addr);
+        vPortFree(server_addr);
+
+        /* 4)开始访问 */
+        conn = netconn_new(NETCONN_TCP);
+        err = netconn_connect(conn, &server_ip, 80); /* 目前也只能支持80端口,比较常用,不考虑特殊情况. */
+
+        if (err == ERR_OK)
+        {
+            netconn_write(conn, request, strlen((char *)request), NETCONN_COPY);
+            vPortFree(request);
+            inBuf = netbuf_new();
+            conn->recv_timeout = 3000;
+            recvPos = 0;
+
+            if(netconn_recv(conn, &inBuf) == ERR_OK)   /* HTTP 1.0 天然不拆包 */
+            {
+                recvBuf = pvPortMalloc(inBuf->p->tot_len);
+                if(recvBuf == NULL)
+                {
+                    return HTTP_OUT_OF_RAM;
+                }
+                for(q = inBuf->p; q != NULL; q = q->next) //遍历完整个pbuf链表
+                {
+                    memcpy(recvBuf + recvPos, q->payload, q->len);
+                    recvPos += q->len;
+                }
+            }
+            else
+            {
+                return HTTP_OUT_OF_RAM;
+            }
+
+            if(inBuf != NULL) netbuf_delete(inBuf);
+            netconn_close(conn);
+            netconn_delete(conn);
+
+            /* 5)分析数据(分析HTTP头,暂时不打算支持301之类的)	*/
+            for(i = 0; recvBuf[i]; ++i)
+            {
+                if (recvBuf[i] == '2' && recvBuf[i + 1] == '0' && recvBuf[i + 2] == '0')
+                {
+                    /* 证明200 OK */
+                    for(; recvBuf[i]; ++i)
+                    {
+                        /* 响应头的结束也是两个回车 */
+                        if(recvBuf[i] == '\r' && recvBuf[i + 1] == '\n' && recvBuf[i + 2] == '\r' && recvBuf[i + 3] == '\n')
+                        {
+                            /* 6)复制正文内容 */
+                            i = i + 5;
+                            k = strlen((const char *)recvBuf) - i;
+                            if(k == 0) return HTTP_NO_CONTENT;
+                            pageBuf = pvPortMalloc(k);
+                            if(pageBuf == NULL)
+                            {
+                                vPortFree(recvBuf);
+                                return HTTP_OUT_OF_RAM;
+                            }
+                            memcpy((char *)pageBuf, (const char *)recvBuf + i, k); /* 用HTTP1.0是没http chunked response的.方便处理,否则还要分段接收网页,大的网页反正MCU也接不下. */
+                            vPortFree(recvBuf);
+                            return HTTP_OK;
+                        }
+                    }
+                }
+            }
+            return HTTP_NOT_200OK;
+        }
+        else
+        {
+            return HTTP_SERVER_REFUSE;
+        }
+
     }
-		vTaskDelete(NULL);
+    else
+    {
+        return HTTPS_NOT_SUPPORT;
+    }
+}
+
+void tcpget_thread(void *arg)
+{
+
+    while(gnetif.ip_addr.addr == 0x00)
+    {
+        vTaskDelay(1000);
+    }
+    while(1)
+    {
+
+        get_webpage("http://ticks.applinzi.com/test.php?price=123&hello=world");
+        if(pageBuf != NULL)
+        {
+            vPortFree(pageBuf);
+            vTaskDelay(100);
+        }
+        vTaskDelay(1000);
+    }
 }
 
 void udplite_thread(void *arg)
