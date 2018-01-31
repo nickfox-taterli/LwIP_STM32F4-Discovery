@@ -443,7 +443,7 @@
  * (only needed if you use the sequential API, like api_lib.c)
  */
 #if !defined MEMP_NUM_NETBUF || defined __DOXYGEN__
-#define MEMP_NUM_NETBUF                 2
+#define MEMP_NUM_NETBUF                 30
 #endif
 
 /**
@@ -492,7 +492,7 @@
  * PBUF_POOL_SIZE: the number of buffers in the pbuf pool.
  */
 #if !defined PBUF_POOL_SIZE || defined __DOXYGEN__
-#define PBUF_POOL_SIZE                  16
+#define PBUF_POOL_SIZE                  24
 #endif
 
 /** MEMP_NUM_API_MSG: the number of concurrently active calls to various
@@ -709,7 +709,7 @@
  * IP_DEFAULT_TTL: Default value for Time-To-Live used by transport layers.
  */
 #if !defined IP_DEFAULT_TTL || defined __DOXYGEN__
-#define IP_DEFAULT_TTL                  255
+#define IP_DEFAULT_TTL                  43
 #endif
 
 /**

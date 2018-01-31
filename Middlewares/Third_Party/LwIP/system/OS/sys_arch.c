@@ -408,5 +408,4 @@ void sys_arch_unprotect(sys_prot_t pval)
   ( void ) pval;
   xSemaphoreGive(lwip_sys_mutex);
 }
-
 #endif /* !NO_SYS */

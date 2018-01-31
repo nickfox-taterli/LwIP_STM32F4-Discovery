@@ -6,6 +6,7 @@
 
 void udpecho_thread(void *arg);
 void tcpecho_thread(void *arg);
+void tcpget_thread(void *arg);
 void udplite_thread(void *arg);
 	
 #endif

@@ -79,9 +79,9 @@ typedef u8_t sys_mbox_t;
 
 #define sys_thread_new(n,t,a,s,p)
 
-#define sys_msleep(t)
-
 #else /* NO_SYS */
+
+#define sys_msleep(t) vTaskDelay(t)
 
 /** Return code for timeouts from sys_arch_mbox_fetch and sys_arch_sem_wait */
 #define SYS_ARCH_TIMEOUT 0xffffffffUL

@@ -70,6 +70,7 @@ void SystemClock_Config(void)
   /* SysTick_IRQn interrupt configuration */
   NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
 	
+	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_RNG);
   LL_RNG_Enable(RNG);
 }
 
@@ -77,10 +78,11 @@ void MainTask(void const * argument)
 {
   MX_LWIP_Init();
   
-	xTaskCreate(udpecho_thread, "udpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,UDPECHO_THREAD_PRIO,NULL);
+	//xTaskCreate(udpecho_thread, "udpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,UDPECHO_THREAD_PRIO,NULL);
 	//xTaskCreate(udplite_thread, "udplite_thread",DEFAULT_THREAD_STACKSIZE, NULL,TCPECHO_THREAD_PRIO,NULL);
   //xTaskCreate(tcpecho_thread, "tcpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,TCPECHO_THREAD_PRIO,NULL);
-  //xTaskCreate(http_server_socket_thread,"httpd_thread",DEFAULT_THREAD_STACKSIZE * 2,NULL,WEBSERVER_THREAD_PRIO,NULL);
+	xTaskCreate(tcpget_thread, "tcpget_thread",DEFAULT_THREAD_STACKSIZE*3, NULL,TCPECHO_THREAD_PRIO,NULL);
+	//xTaskCreate(http_server_socket_thread,"httpd_thread",DEFAULT_THREAD_STACKSIZE * 2,NULL,WEBSERVER_THREAD_PRIO,NULL);
 	//xTaskCreate(iperf_thread,"iperf_thread",DEFAULT_THREAD_STACKSIZE,NULL,WEBSERVER_THREAD_PRIO,NULL);
 	
   for(;;)

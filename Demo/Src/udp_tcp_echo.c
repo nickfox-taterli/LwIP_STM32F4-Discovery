@@ -1,6 +1,7 @@
 #include "lwip/opt.h"
 #include "lwip/api.h"
 #include "lwip/sys.h"
+#include "lwip/dns.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -11,10 +12,11 @@ void udpecho_thread(void *arg)
     struct netbuf *udpbuf;
     struct netbuf *recv_udpbuf;
     ip_addr_t udpaddr;
-    uint8_t udpdemo_buf[18] = {
-			0xAA, 0x55, 0xFF, 0x5A, 0xA5,0xAA, 0x55, 0xFF, 0x5A, 0xA5,
-			0xAA, 0x55, 0xFF, 0x5A, 0xA5,0xAA, 0x55, 0xFF 
-		};
+    uint8_t udpdemo_buf[18] =
+    {
+        0xAA, 0x55, 0xFF, 0x5A, 0xA5, 0xAA, 0x55, 0xFF, 0x5A, 0xA5,
+        0xAA, 0x55, 0xFF, 0x5A, 0xA5, 0xAA, 0x55, 0xFF
+    };
     err_t err;
 
     /* 新建一个连接块 */
@@ -24,11 +26,11 @@ void udpecho_thread(void *arg)
     {
         /* 绑定本地所有地址(开发板是本地) */
         err = netconn_bind(udpconn, IP_ADDR_ANY, 49152);
-				/* 写目标地址 */
+        /* 写目标地址 */
         IP4_ADDR(&udpaddr, 10, 0, 1, 35);
         /* 连接目标端口,UDP是无状态协议,肯定能连接成功的. */
         netconn_connect(udpconn, &udpaddr, 49152);
-			
+
         if (err == ERR_OK)
         {
             while (1)
@@ -78,7 +80,7 @@ void tcpecho_thread(void *arg)
     if (conn != NULL)
     {
         /* 绑定本地7002端口 */
-        err = netconn_bind(conn, NULL, 7002);
+        err = netconn_bind(conn, NULL, 80);
 
         if (err == ERR_OK)
         {
@@ -100,7 +102,7 @@ void tcpecho_thread(void *arg)
                         {
                             netbuf_data(buf, (void *)&data, &len); /* 等到数据长度. */
 
-                            if(data[0] == 0xAA && len >= 2) data[1] ^= data[0]; /* 把读取到的数据进行判断 */
+                            if(data[0] == 0xAA && len >= 2) data[1] = ~data[0]; /* 把读取到的数据进行判断 */
 
                             netconn_write(newconn, data, len, NETCONN_COPY); /* 把数据回写. */
                         }
@@ -123,6 +125,86 @@ void tcpecho_thread(void *arg)
     vTaskDelete(NULL);
 }
 
+
+#include "lwip/netif.h"
+extern struct netif gnetif;
+err_t err,err_recv;
+uint8_t tcp_client_recvbuf[10240];
+
+static const char *REQUEST = "GET /prices/mgets?type=1&skuIds=1379747 HTTP/1.1\r\n"
+"Host: p.3.cn\r\n"
+"User-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n"
+"\r\n";
+
+	uint32_t data_len = 0;
+uint8_t  respon_cnt = 0;
+uint8_t dns_found = 0;
+
+    ip_addr_t remote_ip;
+
+static void found_dns(const char *name, const ip_addr_t *ipaddr, void *callback_arg){	
+}
+
+void tcpget_thread(void *arg)
+{
+    struct netconn *conn;
+    struct netbuf *inBuf;
+		struct pbuf *q;
+
+
+    while(gnetif.ip_addr.addr == 0x00)
+    {
+        vTaskDelay(100);
+    }
+
+    /* 新建一个连接块 */
+    vTaskDelay(1000);
+    conn = netconn_new(NETCONN_TCP);
+   //IP4_ADDR(&remote_ip, 202,108,35,250);
+	err = dns_gethostbyname("p.3.cn", &remote_ip, found_dns,NULL);
+		while(remote_ip.addr == 0x00){
+			vTaskDelay(100);
+			dns_gethostbyname("p.3.cn", &remote_ip, found_dns,NULL);
+		}
+	//IP4_ADDR(&remote_ip, 10,0,1,35);
+    err = netconn_connect(conn, &remote_ip, 80);
+    //conn->recv_timeout = 3000;
+    if (err == ERR_OK)
+    {
+				while(1){
+					
+				netconn_write(conn, REQUEST, strlen((char *)REQUEST), NETCONN_COPY);
+				inBuf = netbuf_new();
+				conn->recv_timeout = 3000;
+					
+				while((err_recv = netconn_recv(conn,&inBuf)) == ERR_OK)
+				{
+					respon_cnt++;
+					for(q=inBuf->p;q!=NULL;q=q->next)  //遍历完整个pbuf链表
+					{
+						//判断要拷贝到TCP_CLIENT_RX_BUFSIZE中的数据是否大于TCP_CLIENT_RX_BUFSIZE的剩余空间，如果大于
+						//的话就只拷贝TCP_CLIENT_RX_BUFSIZE中剩余长度的数据，否则的话就拷贝所有的数据
+						if(q->len > (10240-data_len)) 
+						{memcpy(tcp_client_recvbuf+data_len,q->payload,(10240-data_len));//拷贝数据
+						}else{
+						memcpy(tcp_client_recvbuf+data_len,q->payload,q->len);
+						}
+						data_len += q->len;  	
+						if(data_len > 10240) break; //超出TCP客户端接收数组,跳出	
+					}
+				}
+				
+				if(inBuf != NULL) netbuf_delete(inBuf);
+				netconn_close(conn);
+				netconn_delete(conn);
+			 conn = netconn_new(NETCONN_TCP);
+				err = netconn_connect(conn, &remote_ip, 80);
+        vTaskDelay(3000);
+			}
+    }
+		vTaskDelete(NULL);
+}
+
 void udplite_thread(void *arg)
 {
     struct netconn *udpconn;
@@ -140,24 +222,24 @@ void udplite_thread(void *arg)
         IP4_ADDR(&udpaddr, 10, 0, 1, 35);
         /* 连接目标端口,UDP是无状态协议,肯定能连接成功的. */
         netconn_connect(udpconn, &udpaddr, 7800);
-            while (1)
-            {
-                /* UDP 缓冲区申请 */
-                udpbuf = netbuf_new();
-                /* 申请内存 */
-                netbuf_alloc(udpbuf, strlen((char *)udpdemo_buf));
-                /* 把数据复制到payload里去. */
-                memcpy(udpbuf->p->payload, (void *)udpdemo_buf, strlen((const char *)udpdemo_buf));
-                /* payload 其实也可以直接修改. */
-                ((uint32_t *)udpbuf->p->payload)[0] = xTaskGetTickCount();
-                /* 这一步把数据发送出去. */
-                netconn_send(udpconn, udpbuf);
-                /* UDP总会发成功的. */
-                netbuf_delete(udpbuf);
-                /* 延迟等下一次再发. */
-                vTaskDelay(1000);
-            }
+        while (1)
+        {
+            /* UDP 缓冲区申请 */
+            udpbuf = netbuf_new();
+            /* 申请内存 */
+            netbuf_alloc(udpbuf, strlen((char *)udpdemo_buf));
+            /* 把数据复制到payload里去. */
+            memcpy(udpbuf->p->payload, (void *)udpdemo_buf, strlen((const char *)udpdemo_buf));
+            /* payload 其实也可以直接修改. */
+            ((uint32_t *)udpbuf->p->payload)[0] = xTaskGetTickCount();
+            /* 这一步把数据发送出去. */
+            netconn_send(udpconn, udpbuf);
+            /* UDP总会发成功的. */
+            netbuf_delete(udpbuf);
+            /* 延迟等下一次再发. */
+            vTaskDelay(1000);
+        }
     }
-		 netconn_delete(udpconn);
+    netconn_delete(udpconn);
     vTaskDelete(NULL);
 }

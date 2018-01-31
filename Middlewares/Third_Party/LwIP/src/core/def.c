@@ -106,11 +106,11 @@ lwip_strnstr(const char* buffer, const char* token, size_t n)
 {
   const char* p;
   size_t tokenlen = strlen(token);
-  if (tokenlen == 0) {
+  if (tokenlen == 0) { /* 如果比较目标是0长度,肯定不符合. */
     return LWIP_CONST_CAST(char *, buffer);
   }
   for (p = buffer; *p && (p + tokenlen <= buffer + n); p++) {
-    if ((*p == *token) && (strncmp(p, token, tokenlen) == 0)) {
+    if ((*p == *token) && (strncmp(p, token, tokenlen) == 0)) { /* 如果用strncmp比较相等的字符串,那么他们相等.如果不等,就p指针继续移动继续比较,直到比较出p出现在token位置. */
       return LWIP_CONST_CAST(char *, p);
     }
   }
@@ -133,21 +133,21 @@ lwip_stricmp(const char* str1, const char* str2)
     c1 = *str1++;
     c2 = *str2++;
     if (c1 != c2) {
-      char c1_upc = c1 | 0x20;
-      if ((c1_upc >= 'a') && (c1_upc <= 'z')) {
+      char c1_upc = c1 | 0x20; /* 转为小写 */
+      if ((c1_upc >= 'a') && (c1_upc <= 'z')) { /* 在字母范围. */
         /* characters are not equal an one is in the alphabet range:
         downcase both chars and check again */
-        char c2_upc = c2 | 0x20;
-        if (c1_upc != c2_upc) {
+        char c2_upc = c2 | 0x20; /* 转为小写 */
+        if (c1_upc != c2_upc) { /* 两字母不等(已经都是小写,所以等于忽略了大小写) */
           /* still not equal */
           /* don't care for < or > */
           return 1;
         }
       } else {
         /* characters are not equal but none is in the alphabet range */
-        return 1;
+        return 1; /* 本来都不是字母. */
       }
-    }
+    } 
   } while (c1 != 0);
   return 0;
 }
@@ -167,7 +167,7 @@ lwip_strnicmp(const char* str1, const char* str2, size_t len)
   do {
     c1 = *str1++;
     c2 = *str2++;
-    if (c1 != c2) {
+    if (c1 != c2) { /* 与lwip_stricmp一样逻辑. */
       char c1_upc = c1 | 0x20;
       if ((c1_upc >= 'a') && (c1_upc <= 'z')) {
         /* characters are not equal an one is in the alphabet range:
@@ -183,7 +183,7 @@ lwip_strnicmp(const char* str1, const char* str2, size_t len)
         return 1;
       }
     }
-  } while (len-- && c1 != 0);
+	} while (len-- && c1 != 0); /* 多了一个条件,就是len,因为只比较len长度的内存,超过的不管. */
   return 0;
 }
 #endif
@@ -203,9 +203,9 @@ lwip_itoa(char* result, size_t bufsize, int number)
   LWIP_UNUSED_ARG(bufsize);
 
   do {
-    tmp_value = number;
-    number /= base;
-    *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz"[35 + (tmp_value - number * base)];
+    tmp_value = number; 
+    number /= base; /* 比如传入123,那么等下数组偏移是(35 + 123 - 120) = 38,也就是char型的3.这个数组是不是可以不要字母,为什么要字母? */
+    *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz"[35 + (tmp_value - number * base)]; /* 35是26个字母 + 10个数字的元素偏移,元素从0开始,所以是35. */
   } while(number);
 
    /* Apply negative sign */
