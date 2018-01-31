@@ -144,7 +144,7 @@ int get_webpage(const char *url)
 {
 
     uint16_t i, j, k;
-    char *server_addr = pvPortMalloc(strlen(url) - 7);
+    char *server_addr = NULL;
     char *web_addr = NULL;
     ip_addr_t server_ip;
     struct netconn *conn;
@@ -163,6 +163,7 @@ int get_webpage(const char *url)
 
     if(strncmp((const char *)url, "http://", 7) == 0) 		/* 只处理http协议 */
     {
+		server_addr = pvPortMalloc(strlen(url) - 7);
         /* 1)提取服务器部分 */
         for(i = 4; url[i]; ++i)
         {
