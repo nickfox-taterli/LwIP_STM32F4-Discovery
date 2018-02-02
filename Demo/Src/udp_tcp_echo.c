@@ -7,6 +7,10 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cJSON.h"
 
 extern struct netif gnetif;
 
@@ -138,11 +142,9 @@ void tcpecho_thread(void *arg)
 #define HTTP_NOT_200OK	-6
 #define HTTP_NO_CONTENT -7
 #define HTTP_SERVER_ADDR_ERROR	-8
+#define HTTP_NOT_VALID_ADDR -9
 
-uint8_t *pageBuf;
-uint8_t len;
-
-int get_webpage(const char *url)
+int get_webpage(const char *url, uint8_t **pageBuf)
 {
 
     uint16_t i, j, k;
@@ -155,8 +157,7 @@ int get_webpage(const char *url)
     char *request = NULL;
     uint16_t recvPos = 0;
     uint8_t *recvBuf;
-		err_t err_msg;
-
+    err_t err_msg;
 
     while(gnetif.ip_addr.addr == 0x00)
     {
@@ -165,8 +166,8 @@ int get_webpage(const char *url)
 
     if(strncmp((const char *)url, "http://", 7) == 0) 		/* 只处理http协议 */
     {
-				server_addr = pvPortMalloc(strlen(url) - 7);
-			        if(server_addr == NULL) return HTTP_OUT_OF_RAM;
+        server_addr = pvPortMalloc(strlen(url) - 7);
+        if(server_addr == NULL) return HTTP_OUT_OF_RAM;
         /* 1)提取服务器部分 */
         for(i = 4; url[i]; ++i)
         {
@@ -184,13 +185,13 @@ int get_webpage(const char *url)
                 server_addr[j] = '\0';
 
                 web_addr = pvPortMalloc(strlen(url) - 7 - strlen(server_addr));
-								        if(web_addr == NULL) return HTTP_OUT_OF_RAM;
-								
+                if(web_addr == NULL) return HTTP_OUT_OF_RAM;
+
                 for (k = 7 + j; k < (strlen(url)); k++) /* 后半部分提取 */
                 {
                     web_addr[k - 7 - j] = url[k];
                 }
-								
+
                 web_addr[k - 7 - j] = '\0';
 
                 while (--j)
@@ -203,22 +204,32 @@ int get_webpage(const char *url)
             }
 
         }
-				
-				if(strlen(server_addr) < 5){
-					vPortFree(server_addr);
-					return HTTP_SERVER_ADDR_ERROR;
-				}
-				
+
+        if(strlen(server_addr) < 2) /* 最短网址3.cn */
+        {
+            vPortFree(server_addr);
+            if(web_addr == NULL) vPortFree(web_addr); /* 这么短,还不一定提取到了这个. */
+            return HTTP_SERVER_ADDR_ERROR;
+        }
+
         /* 2)查询IP */
         netconn_gethostbyname(server_addr, &server_ip);
 
         /* 3)构造访问头 */
         request = pvPortMalloc(strlen(url) + 128); /* 头所需内存大小. */
         if(request == NULL) return HTTP_OUT_OF_RAM;
-        sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n12", web_addr, server_addr);
-        //sprintf(request, "GET /data/cityinfo/101010100.html HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n12", server_addr);
-				vPortFree(web_addr);
+        sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n", web_addr, server_addr);
         vPortFree(server_addr);
+        if(web_addr != NULL)
+        {
+            /* 万一没提取到,就是NULL,如果是NULL,那么也不用继续了. */
+            vPortFree(web_addr);
+        }
+        else
+        {
+            vPortFree(request);
+            return HTTP_NOT_VALID_ADDR;
+        }
 
         /* 4)开始访问 */
         conn = netconn_new(NETCONN_TCP);
@@ -269,22 +280,22 @@ int get_webpage(const char *url)
                             i = i + 5;
                             k = strlen((const char *)recvBuf) - i;
                             if(k == 0) return HTTP_NO_CONTENT;
-                            pageBuf = pvPortMalloc(k);
-                            if(pageBuf == NULL)
+                            *pageBuf = pvPortMalloc(k);
+                            if(*pageBuf == NULL)
                             {
                                 vPortFree(recvBuf);
                                 return HTTP_OUT_OF_RAM;
                             }
-                            memcpy((char *)pageBuf, (const char *)recvBuf + i, k); /* 用HTTP1.0是没http chunked response的.方便处理,否则还要分段接收网页,大的网页反正MCU也接不下. */
+                            memcpy((char *)*pageBuf, (const char *)recvBuf + i, k); /* 用HTTP1.0是没http chunked response的.方便处理,否则还要分段接收网页,大的网页反正MCU也接不下. */
                             vPortFree(recvBuf);
                             return HTTP_OK;
                         }
                     }
                 }
             }
-						
-						if(recvBuf != NULL)	vPortFree(recvBuf);
-						
+
+            if(recvBuf != NULL)	vPortFree(recvBuf);
+
             return HTTP_NOT_200OK;
         }
         else
@@ -299,10 +310,12 @@ int get_webpage(const char *url)
     }
 }
 
+uint8_t *abuf;
+
 void tcpget_thread(void *arg)
 {
-		int err = HTTP_OK;
-	
+    int err = HTTP_OK;
+
     while(gnetif.ip_addr.addr == 0x00)
     {
         vTaskDelay(1000);
@@ -310,10 +323,10 @@ void tcpget_thread(void *arg)
     while(1)
     {
 
-        err = get_webpage("http://www.weather.com.cn/data/cityinfo/101010100.html");
-        if(pageBuf != NULL && err == HTTP_OK)
+        err = get_webpage("http://www.weather.com.cn/data/cityinfo/101010100.html", &abuf);
+        if(abuf != NULL && err == HTTP_OK)
         {
-            vPortFree(pageBuf);
+            vPortFree(abuf);
             vTaskDelay(100);
         }
         vTaskDelay(1000);
