@@ -277,7 +277,7 @@ int get_webpage(const char *url, uint8_t **pageBuf)
                         if(recvBuf[i] == '\r' && recvBuf[i + 1] == '\n' && recvBuf[i + 2] == '\r' && recvBuf[i + 3] == '\n')
                         {
                             /* 6)复制正文内容 */
-                            i = i + 5;
+                            i += 4;
                             k = strlen((const char *)recvBuf) - i;
                             if(k == 0) return HTTP_NO_CONTENT;
                             *pageBuf = pvPortMalloc(k);
@@ -311,6 +311,8 @@ int get_webpage(const char *url, uint8_t **pageBuf)
 }
 
 uint8_t *abuf;
+cJSON *root;
+cJSON *str1, *str2;
 
 void tcpget_thread(void *arg)
 {
@@ -323,9 +325,14 @@ void tcpget_thread(void *arg)
     while(1)
     {
 
-        err = get_webpage("http://www.weather.com.cn/data/cityinfo/101010100.html", &abuf);
+        err = get_webpage("http://1.ticks.applinzi.com/test.php?price=123&hello=world", &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
+            root = cJSON_Parse((const char *)abuf);
+
+            str1 = cJSON_GetObjectItem( root , "hello" );
+            str2 = cJSON_GetObjectItem( root , "price" );
+            cJSON_Delete(root);
             vPortFree(abuf);
             vTaskDelay(100);
         }
