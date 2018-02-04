@@ -1,3 +1,11 @@
+/**
+  ******************************************************************************
+  * @file    shell.c
+  * @author  TaterLi
+  * @brief   LwIP Netconn Telnet Server
+  ******************************************************************************
+  */
+
 #include "shell.h"
 
 #include "lwip/opt.h"
@@ -45,9 +53,9 @@ static int8_t shell_com_hello(struct command *com)
 
 static int8_t shell_com_echo(struct command *com)
 {
-		char *str = pvPortMalloc(TELNET_BUFSIZE - 4);
-		sprintf(str,"echo %s - %s\r\n",com->args[0],com->args[1]); /* 参数0直接回去. */
-    shell_sendstr(str, com->conn); 
+    char *str = pvPortMalloc(TELNET_BUFSIZE - 4);
+    sprintf(str, "echo %s - %s\r\n", com->args[0], com->args[1]); /* 参数0直接回去. */
+    shell_sendstr(str, com->conn);
     return ESUCCESS;
 }
 
@@ -56,11 +64,12 @@ static int8_t shell_parse_command(struct command *com, u32_t len)
     uint16_t i;
     uint16_t bufp;
 
-	if (strncmp((const char *)telnet_buffer, "echo", 4) == 0) {
-    com->exec = shell_com_echo;
-    com->nargs = 2; /* 所需参数总量 */
-	}
-	else if (strncmp((const char *)telnet_buffer, "hello", 5) == 0) /* 反复比较字符串 */
+    if (strncmp((const char *)telnet_buffer, "echo", 4) == 0)
+    {
+        com->exec = shell_com_echo;
+        com->nargs = 2; /* 所需参数总量 */
+    }
+    else if (strncmp((const char *)telnet_buffer, "hello", 5) == 0) /* 反复比较字符串 */
     {
         com->exec = shell_com_hello;
         com->nargs = 0; /* 如果有参数还要填arg */
@@ -78,9 +87,9 @@ static int8_t shell_parse_command(struct command *com, u32_t len)
     {
         return ESUCCESS;
     }
-		
-		/* 找参数同时给Buf不足容错 */
-		
+
+    /* 找参数同时给Buf不足容错,但是目前参数不够会莫名其妙卡死. */
+
     for(bufp = 0; bufp < len && telnet_buffer[bufp] != ' '; bufp++);
     for(i = 0; i < 5; i++) /* 遍历5个参数 */
     {
@@ -133,7 +142,8 @@ static void shell_error(s8_t err, struct netconn *conn)
     switch (err)
     {
     case ESYNTAX:
-        shell_sendstr("## Command not found!\r\n", conn);
+        /* shell_sendstr("## Command not found!\r\n", conn); */
+        /* 通常只是因为回车等未输入完整. */
         break;
     case ETOOFEW:
         shell_sendstr("## Too few arguments to command given!\r\n", conn);
@@ -164,7 +174,7 @@ void shell_thread(void *arg)
     while (1)
     {
         err = netconn_accept(conn, &newconn);
-				telnet_buffer = pvPortMalloc(TELNET_BUFSIZE);
+        telnet_buffer = pvPortMalloc(TELNET_BUFSIZE);
         shell_sendstr("Welcome to STM32 Telnet Server by TaterLi.type \"hello\" for Hello World.\r\n\r\nSTM32 Telnet > ", newconn);
         if (err == ERR_OK)
         {
@@ -173,7 +183,7 @@ void shell_thread(void *arg)
                 ret = netconn_recv_tcp_pbuf(newconn, &p); /* 直接获取到pbuf */
                 if (ret == ERR_OK)
                 {
-									pbuf_copy_partial(p, &telnet_buffer[len], TELNET_BUFSIZE - len, 0); /* 复制收到的内容,如果输入很长还不回车,len不会重置就溢出. */
+                    pbuf_copy_partial(p, &telnet_buffer[len], TELNET_BUFSIZE - len, 0); /* 复制收到的内容,如果输入很长还不回车,len不会重置就溢出. */
                     cur_len = p->tot_len;
                     len += cur_len;
 
@@ -182,9 +192,9 @@ void shell_thread(void *arg)
                             (len >= TELNET_BUFSIZE))
                     {
                         if (telnet_buffer[0] != 0xff &&
-													telnet_buffer[1] != 0xfe) /* 判断下,不是首次握手. */
+                                telnet_buffer[1] != 0xfe) /* 判断下,不是首次握手. */
                         {
-														err = shell_parse_command(&com, len); /* 解释命令,命令正在buf的开头写着. */
+                            err = shell_parse_command(&com, len); /* 解释命令,命令正在buf的开头写着. */
                             if (err == ESUCCESS)
                             {
                                 com.conn = newconn;
@@ -200,7 +210,7 @@ void shell_thread(void *arg)
                                 shell_error(err, newconn);
                             }
                         }
-												shell_sendstr("STM32 Telnet > ", newconn); /* 输出命令提示符. */
+                        shell_sendstr("STM32 Telnet > ", newconn); /* 输出命令提示符. */
                         len = 0; /* 处理完指针归零. */
                     }
                 }
@@ -210,7 +220,7 @@ void shell_thread(void *arg)
 close:
             netconn_close(conn);
             netconn_delete(newconn);
-						vPortFree(telnet_buffer);
+            vPortFree(telnet_buffer);
         }
     }
 }
