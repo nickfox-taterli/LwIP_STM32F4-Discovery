@@ -8,6 +8,8 @@
 > * TCP Echo
 > * UDP-Lite Sender
 > * HTTP Server
+> * HTTP Client
+> * Telnet
 
 主要组件:
 
