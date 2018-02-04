@@ -1,3 +1,71 @@
+/**
+  ******************************************************************************
+  * @file    webclient.c
+  * @author  TaterLi
+  * @brief   LwIP Netconn HTTP/1.0 Client (GET/POST)
+  ******************************************************************************
+
+	Example:
+
+	extern struct netif gnetif;
+
+	cJSON *root, *sub_root;
+	cJSON *origin_price, *real_price;
+	uint8_t *abuf;
+
+	void web_view(void *arg)
+	{
+			int err = HTTP_OK;
+			const char postVar[] = "origin_price=1&real_price=3";
+
+			while(gnetif.ip_addr.addr == 0x00)
+			{
+					vTaskDelay(1000);
+			}
+			while(1)
+			{
+
+					err = WebClient("http://ticks.applinzi.com/lwip/post.php", postVar, &abuf);
+					if(abuf != NULL && err == HTTP_OK)
+					{
+							root = cJSON_Parse((const char *)abuf);
+
+							origin_price = cJSON_GetObjectItem( root , "origin_price" );
+							real_price = cJSON_GetObjectItem( root , "real_price" );
+							vPortFree(abuf);
+							cJSON_Delete(root);
+							vTaskDelay(100);
+					}
+
+					err = WebClient("http://ticks.applinzi.com/lwip/get.php?origin_price=2&real_price=6", NULL, &abuf);
+					if(abuf != NULL && err == HTTP_OK)
+					{
+							root = cJSON_Parse((const char *)abuf);
+
+							origin_price = cJSON_GetObjectItem( root , "origin_price" );
+							real_price = cJSON_GetObjectItem( root , "real_price" );
+							vPortFree(abuf);
+							cJSON_Delete(root);
+							vTaskDelay(100);
+					}
+
+					err = WebClient("http://ticks.applinzi.com/lwip/mixed.php?origin_price=5", postVar, &abuf);
+					if(abuf != NULL && err == HTTP_OK)
+					{
+							root = cJSON_Parse((const char *)abuf);
+
+							sub_root = cJSON_GetObjectItem( root , "get" );
+							origin_price = cJSON_GetObjectItem( sub_root , "origin_price" );
+							vPortFree(abuf);
+							cJSON_Delete(root);
+							vTaskDelay(100);
+					}
+					vTaskDelay(1000);
+			}
+	}
+
+  */
+
 #include "webclient.h"
 
 extern struct netif gnetif;
@@ -9,8 +77,8 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
     char *server_addr = NULL;
     char *web_addr = NULL;
     ip_addr_t server_ip;
-    struct netconn *conn;
-    struct netbuf *inBuf;
+    struct netconn *conn = NULL;
+    struct netbuf *inBuf = NULL;
     struct pbuf *q;
     char *request = NULL;
     uint16_t recvPos = 0;
@@ -76,12 +144,12 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
         /* 3)构造访问头 */
         request = pvPortMalloc(strlen(url) + 1024); /* 头所需内存大小. */
         if(request == NULL) return HTTP_OUT_OF_RAM;
-        
-				if(post != NULL)
-					sprintf(request, "POST %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\nContent-Length: %d\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n%s", web_addr, server_addr,strlen(post),post);
+
+        if(post != NULL)
+            sprintf(request, "POST %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\nContent-Length: %d\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n%s", web_addr, server_addr, strlen(post), post);
         else
-					sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n", web_addr, server_addr);
-				vPortFree(server_addr);
+            sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n", web_addr, server_addr);
+        vPortFree(server_addr);
         if(web_addr != NULL)
         {
             /* 万一没提取到,就是NULL,如果是NULL,那么也不用继续了. */
@@ -101,11 +169,10 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
         {
             netconn_write(conn, request, strlen((char *)request), NETCONN_COPY);
             vPortFree(request);
-            inBuf = netbuf_new();
             conn->recv_timeout = 3000;
             recvPos = 0;
 
-            if(netconn_recv(conn, &inBuf) == ERR_OK)   /* HTTP 1.0 天然不拆包 */
+            if((err_msg = netconn_recv(conn, &inBuf)) == ERR_OK)   /* HTTP 1.0 天然不拆包 */
             {
                 recvBuf = pvPortMalloc(inBuf->p->tot_len);
                 if(recvBuf == NULL)
@@ -118,14 +185,12 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
                     recvPos += q->len;
                 }
             }
-            else
-            {
-                return HTTP_OUT_OF_RAM;
-            }
 
-            if(inBuf != NULL) netbuf_delete(inBuf);
             netconn_close(conn);
             netconn_delete(conn);
+            netbuf_delete(inBuf);
+
+            if(err_msg != ERR_OK) return HTTP_OUT_OF_RAM;
 
             /* 5)分析数据(分析HTTP头,暂时不打算支持301之类的)	*/
             for(i = 0; recvBuf[i]; ++i)

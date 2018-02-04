@@ -15,7 +15,7 @@
 
 extern struct netif gnetif;
 
-cJSON *root;
+cJSON *root, *sub_root;
 cJSON *origin_price, *real_price;
 uint8_t *abuf;
 
@@ -41,35 +41,30 @@ void web_view(void *arg)
             vPortFree(abuf);
             cJSON_Delete(root);
             vTaskDelay(100);
-					
         }
 
         err = WebClient("http://ticks.applinzi.com/lwip/get.php?origin_price=2&real_price=6", NULL, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
-					
             root = cJSON_Parse((const char *)abuf);
 
             origin_price = cJSON_GetObjectItem( root , "origin_price" );
             real_price = cJSON_GetObjectItem( root , "real_price" );
             vPortFree(abuf);
-						cJSON_Delete(root);
+            cJSON_Delete(root);
             vTaskDelay(100);
-					
         }
-				
-				err = WebClient("http://ticks.applinzi.com/lwip/mixed.php?get_origin_price=5", postVar, &abuf);
+
+        err = WebClient("http://ticks.applinzi.com/lwip/mixed.php?origin_price=5", postVar, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
-					
             root = cJSON_Parse((const char *)abuf);
 
-            origin_price = cJSON_GetObjectItem( root , "get_origin_price" );
-            real_price = cJSON_GetObjectItem( root , "real_price" );
+            sub_root = cJSON_GetObjectItem( root , "get" );
+            origin_price = cJSON_GetObjectItem( sub_root , "origin_price" );
             vPortFree(abuf);
-						cJSON_Delete(root);
+            cJSON_Delete(root);
             vTaskDelay(100);
-					
         }
         vTaskDelay(1000);
     }
