@@ -9,7 +9,7 @@
 > * UDP-Lite Sender
 > * HTTP Server
 > * HTTP Client
-> * Telnet
+> * Telnet Server
 
 主要组件:
 
