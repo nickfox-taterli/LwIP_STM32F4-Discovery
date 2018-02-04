@@ -70,12 +70,12 @@
 
 extern struct netif gnetif;
 
-int WebClient(const char *url, const char *post, uint8_t **pageBuf)
+int8_t WebClient(const char *url, const char *post, uint8_t **pageBuf)
 {
 
     uint16_t i, j, k;
-    char *server_addr = NULL;
-    char *web_addr = NULL;
+    uint8_t *server_addr = NULL;
+    uint8_t *web_addr = NULL;
     ip_addr_t server_ip;
     struct netconn *conn = NULL;
     struct netbuf *inBuf = NULL;
@@ -110,7 +110,7 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
                 }
                 server_addr[j] = '\0';
 
-                web_addr = pvPortMalloc(strlen(url) - 7 - strlen(server_addr));
+                web_addr = pvPortMalloc(strlen(url) - 7 - strlen((const char *)server_addr));
                 if(web_addr == NULL) return HTTP_OUT_OF_RAM;
 
                 for (k = 7 + j; k < (strlen(url)); k++) /* 后半部分提取 */
@@ -131,7 +131,7 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
 
         }
 
-        if(strlen(server_addr) < 2) /* 最短网址3.cn */
+        if(strlen((const char *)server_addr) < 2) /* 最短网址3.cn */
         {
             vPortFree(server_addr);
             if(web_addr == NULL) vPortFree(web_addr); /* 这么短,还不一定提取到了这个. */
@@ -139,7 +139,7 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
         }
 
         /* 2)查询IP */
-        netconn_gethostbyname(server_addr, &server_ip);
+        netconn_gethostbyname((const char *)server_addr, &server_ip);
 
         /* 3)构造访问头 */
         request = pvPortMalloc(strlen(url) + 1024); /* 头所需内存大小. */
@@ -164,7 +164,7 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
         /* 4)开始访问 */
         conn = netconn_new(NETCONN_TCP);
         err_msg = netconn_connect(conn, &server_ip, 80); /* 目前也只能支持80端口,比较常用,不考虑特殊情况. */
-
+				
         if (err_msg == ERR_OK)
         {
             netconn_write(conn, request, strlen((char *)request), NETCONN_COPY);
@@ -172,7 +172,7 @@ int WebClient(const char *url, const char *post, uint8_t **pageBuf)
             conn->recv_timeout = 3000;
             recvPos = 0;
 
-            if((err_msg = netconn_recv(conn, &inBuf)) == ERR_OK)   /* HTTP 1.0 天然不拆包 */
+            if((err_msg = netconn_recv(conn, &inBuf)) == ERR_OK)   /* HTTP 1.0 天然不拆包,里面有alloc操作. */
             {
                 recvBuf = pvPortMalloc(inBuf->p->tot_len);
                 if(recvBuf == NULL)

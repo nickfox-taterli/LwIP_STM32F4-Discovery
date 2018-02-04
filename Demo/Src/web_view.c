@@ -15,9 +15,11 @@
 
 extern struct netif gnetif;
 
-cJSON *root, *sub_root;
-cJSON *origin_price, *real_price;
+cJSON *root;
+char *origin_price, *real_price;
 uint8_t *abuf;
+
+uint32_t free_ram = 0;
 
 void web_view(void *arg)
 {
@@ -29,43 +31,39 @@ void web_view(void *arg)
         vTaskDelay(1000);
     }
     while(1)
-    {
-
-        err = WebClient("http://ticks.applinzi.com/lwip/post.php", postVar, &abuf);
+    {			
+        err = WebClient("http://10.0.1.64/lwip/post.php", postVar, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
             root = cJSON_Parse((const char *)abuf);
 
-            origin_price = cJSON_GetObjectItem( root , "origin_price" );
-            real_price = cJSON_GetObjectItem( root , "real_price" );
+            origin_price = cJSON_GetObjectItem( root , "origin_price" )->valuestring;
+            real_price = cJSON_GetObjectItem( root , "real_price" )->valuestring;
             vPortFree(abuf);
             cJSON_Delete(root);
-            vTaskDelay(100);
         }
 
-        err = WebClient("http://ticks.applinzi.com/lwip/get.php?origin_price=2&real_price=6", NULL, &abuf);
+        err = WebClient("http://10.0.1.64/lwip/get.php?origin_price=2&real_price=6", NULL, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
             root = cJSON_Parse((const char *)abuf);
 
-            origin_price = cJSON_GetObjectItem( root , "origin_price" );
-            real_price = cJSON_GetObjectItem( root , "real_price" );
+            origin_price = cJSON_GetObjectItem( root , "origin_price" )->valuestring;
+            real_price = cJSON_GetObjectItem( root , "real_price" )->valuestring;
             vPortFree(abuf);
             cJSON_Delete(root);
-            vTaskDelay(100);
         }
 
-        err = WebClient("http://ticks.applinzi.com/lwip/mixed.php?origin_price=5", postVar, &abuf);
+        err = WebClient("http://10.0.1.64/lwip/mixed.php?origin_price=5", postVar, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
             root = cJSON_Parse((const char *)abuf);
-
-            sub_root = cJSON_GetObjectItem( root , "get" );
-            origin_price = cJSON_GetObjectItem( sub_root , "origin_price" );
+            origin_price = cJSON_GetObjectItem( cJSON_GetObjectItem( root , "get" ) , "origin_price" )->valuestring;
+						real_price = cJSON_GetObjectItem( cJSON_GetObjectItem( root , "post" ) , "real_price" )->valuestring;
             vPortFree(abuf);
             cJSON_Delete(root);
-            vTaskDelay(100);
         }
-        vTaskDelay(1000);
+				
+				vTaskDelay(30 * 1000);
     }
 }

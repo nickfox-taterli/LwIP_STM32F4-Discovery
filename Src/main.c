@@ -22,6 +22,7 @@
 #include "event_groups.h"
 
 #include "web_view.h"
+#include "shell.h"
 
 void SystemClock_Config(void)
 {
@@ -72,16 +73,24 @@ void SystemClock_Config(void)
   LL_RNG_Enable(RNG);
 }
 
+extern struct netif gnetif;
+
 void MainTask(void const * argument)
 {
   MX_LWIP_Init();
+	
+	while(gnetif.ip_addr.addr == 0x00)
+	{
+			vTaskDelay(1000);
+	}
   
 	//xTaskCreate(udpecho_thread, "udpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,UDPECHO_THREAD_PRIO,NULL);
 	//xTaskCreate(udplite_thread, "udplite_thread",DEFAULT_THREAD_STACKSIZE, NULL,TCPECHO_THREAD_PRIO,NULL);
   //xTaskCreate(tcpecho_thread, "tcpecho_thread",DEFAULT_THREAD_STACKSIZE, NULL,TCPECHO_THREAD_PRIO,NULL);
-	xTaskCreate(web_view, "web_view",DEFAULT_THREAD_STACKSIZE, NULL,WEB_THREAD_PRIO,NULL);
+	//xTaskCreate(web_view, "web_view",DEFAULT_THREAD_STACKSIZE, NULL,WEB_THREAD_PRIO,NULL);
 	//xTaskCreate(http_server_socket_thread,"httpd_thread",DEFAULT_THREAD_STACKSIZE * 2,NULL,WEBSERVER_THREAD_PRIO,NULL);
 	//xTaskCreate(iperf_thread,"iperf_thread",DEFAULT_THREAD_STACKSIZE,NULL,WEBSERVER_THREAD_PRIO,NULL);
+	xTaskCreate(shell_thread, "shell_thread",DEFAULT_THREAD_STACKSIZE, NULL,DEFAULT_THREAD_PRIO,NULL);
 	
   for(;;)
   {

@@ -94,6 +94,7 @@ mem_trim(void *mem, mem_size_t size)
 /* in case C library malloc() needs extra protection,
  * allow these defines to be overridden.
  */
+
 #ifndef mem_clib_free
 #define mem_clib_free free
 #endif
