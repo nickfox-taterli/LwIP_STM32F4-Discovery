@@ -68,3 +68,8 @@
 # !my_customized_scatter_file.sct
 
 *.log
+JLinkLog.txt
+JLinkSettings.ini
+EventRecorderStub.scvd
+RTE
+RTE/*
