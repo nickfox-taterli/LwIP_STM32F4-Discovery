@@ -24,6 +24,6 @@
 #define HTTP_SERVER_ADDR_ERROR	-8
 #define HTTP_NOT_VALID_ADDR -9
 
-int get_webpage(const char *url, uint8_t **pageBuf);
+int WebClient(const char *url, const char *post, uint8_t **pageBuf);
 
 #endif

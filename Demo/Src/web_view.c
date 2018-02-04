@@ -15,13 +15,14 @@
 
 extern struct netif gnetif;
 
-uint8_t *abuf;
 cJSON *root;
 cJSON *origin_price, *real_price;
+uint8_t *abuf;
 
 void web_view(void *arg)
 {
     int err = HTTP_OK;
+    const char postVar[] = "origin_price=1&real_price=3";
 
     while(gnetif.ip_addr.addr == 0x00)
     {
@@ -30,18 +31,31 @@ void web_view(void *arg)
     while(1)
     {
 
-        err = get_webpage("http://p.3.cn/prices/mgets?type=1&skuIds=1379747", &abuf);
+        err = WebClient("http://ticks.applinzi.com/lwip/post.php", postVar, &abuf);
         if(abuf != NULL && err == HTTP_OK)
         {
-            root = cJSON_Parse((const char *)abuf + 1); /* 部分JSON一开始字符是[ 结尾字符无关 */
+            root = cJSON_Parse((const char *)abuf);
 
-            origin_price = cJSON_GetObjectItem( root , "op" );
-            real_price = cJSON_GetObjectItem( root , "p" );
-            cJSON_Delete(root);
+            origin_price = cJSON_GetObjectItem( root , "origin_price" );
+            real_price = cJSON_GetObjectItem( root , "real_price" );
             vPortFree(abuf);
-						if(origin_price != NULL) vPortFree(origin_price);
-						if(real_price != NULL) vPortFree(real_price);
+            cJSON_Delete(root);
             vTaskDelay(100);
+					
+        }
+
+        err = WebClient("http://ticks.applinzi.com/lwip/get.php?origin_price=2&real_price=6", NULL, &abuf);
+        if(abuf != NULL && err == HTTP_OK)
+        {
+					
+            root = cJSON_Parse((const char *)abuf);
+
+            origin_price = cJSON_GetObjectItem( root , "origin_price" );
+            real_price = cJSON_GetObjectItem( root , "real_price" );
+            vPortFree(abuf);
+						cJSON_Delete(root);
+            vTaskDelay(100);
+					
         }
         vTaskDelay(1000);
     }

@@ -2,7 +2,7 @@
 
 extern struct netif gnetif;
 
-int get_webpage(const char *url, uint8_t **pageBuf)
+int WebClient(const char *url, const char *post, uint8_t **pageBuf)
 {
 
     uint16_t i, j, k;
@@ -74,10 +74,14 @@ int get_webpage(const char *url, uint8_t **pageBuf)
         netconn_gethostbyname(server_addr, &server_ip);
 
         /* 3)构造访问头 */
-        request = pvPortMalloc(strlen(url) + 128); /* 头所需内存大小. */
+        request = pvPortMalloc(strlen(url) + 1024); /* 头所需内存大小. */
         if(request == NULL) return HTTP_OUT_OF_RAM;
-        sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n", web_addr, server_addr);
-        vPortFree(server_addr);
+        
+				if(post != NULL)
+					sprintf(request, "POST %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\nContent-Length: %d\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n%s", web_addr, server_addr,strlen(post),post);
+        else
+					sprintf(request, "GET %s HTTP/1.0\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (lwip;STM32) TaterLi\r\n\r\n", web_addr, server_addr);
+				vPortFree(server_addr);
         if(web_addr != NULL)
         {
             /* 万一没提取到,就是NULL,如果是NULL,那么也不用继续了. */
