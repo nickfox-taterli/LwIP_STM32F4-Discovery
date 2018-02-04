@@ -336,7 +336,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>USE_FULL_LL_DRIVER,STM32F407xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;../Middlewares/Third_Party/LwIP/src/include;../Middlewares/Third_Party/LwIP/system;../Drivers/STM32F4xx_HAL_Driver/Inc;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/LwIP/src/include/netif/ppp;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/LwIP/src/include/lwip;../Middlewares/Third_Party/LwIP/src/include/lwip/apps;../Middlewares/Third_Party/LwIP/src/include/lwip/priv;../Middlewares/Third_Party/LwIP/src/include/lwip/prot;../Middlewares/Third_Party/LwIP/src/include/netif;../Middlewares/Third_Party/LwIP/src/include/posix;../Middlewares/Third_Party/LwIP/src/include/posix/sys;../Middlewares/Third_Party/LwIP/system/arch;../Middlewares/Third_Party/cJSON/Include;../Drivers/CMSIS/Include;../Demo/Inc</IncludePath>
+              <IncludePath>../Inc;../Middlewares/Third_Party/LwIP/src/include;../Middlewares/Third_Party/LwIP/system;../Drivers/STM32F4xx_HAL_Driver/Inc;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/Third_Party/LwIP/src/include/netif/ppp;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/LwIP/src/include/lwip;../Middlewares/Third_Party/LwIP/src/include/lwip/apps;../Middlewares/Third_Party/LwIP/src/include/lwip/priv;../Middlewares/Third_Party/LwIP/src/include/lwip/prot;../Middlewares/Third_Party/LwIP/src/include/netif;../Middlewares/Third_Party/LwIP/src/include/posix;../Middlewares/Third_Party/LwIP/src/include/posix/sys;../Middlewares/Third_Party/LwIP/system/arch;../Middlewares/Third_Party/cJSON/Include;../Middlewares/Third_Party/WebClient;../Drivers/CMSIS/Include;../Demo/Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -561,9 +561,9 @@
           <GroupName>Application/Demo</GroupName>
           <Files>
             <File>
-              <FileName>udp_tcp_echo.c</FileName>
+              <FileName>web_view.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Demo\Src\udp_tcp_echo.c</FilePath>
+              <FilePath>..\Demo\Src\web_view.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -934,6 +934,16 @@
               <FileName>cJSON_Utils.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Middlewares\Third_Party\cJSON\Source\cJSON_Utils.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Middlewares/WebClient</GroupName>
+          <Files>
+            <File>
+              <FileName>webclient.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Middlewares\Third_Party\WebClient\webclient.c</FilePath>
             </File>
           </Files>
         </Group>

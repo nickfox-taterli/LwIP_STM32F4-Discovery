@@ -129,30 +129,13 @@ typedef struct internal_hooks
 {
     void *(*allocate)(size_t size);
     void (*deallocate)(void *pointer);
-    void *(*reallocate)(void *pointer, size_t size);
 } internal_hooks;
 
-#if defined(_MSC_VER)
-/* work around MSVC error C2322: '...' address of dillimport '...' is not static */
-static void *internal_malloc(size_t size)
-{
-    return malloc(size);
-}
-static void internal_free(void *pointer)
-{
-    free(pointer);
-}
-static void *internal_realloc(void *pointer, size_t size)
-{
-    return realloc(pointer, size);
-}
-#else
-#define internal_malloc malloc
-#define internal_free free
-#define internal_realloc realloc
-#endif
 
-static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };
+#define internal_malloc pvPortMalloc
+#define internal_free vPortFree
+
+static internal_hooks global_hooks = { internal_malloc, internal_free };
 
 static unsigned char* cJSON_strdup(const unsigned char* string, const internal_hooks * const hooks)
 {
@@ -180,29 +163,21 @@ CJSON_PUBLIC(void) cJSON_InitHooks(cJSON_Hooks* hooks)
     if (hooks == NULL)
     {
         /* Reset hooks */
-        global_hooks.allocate = malloc;
-        global_hooks.deallocate = free;
-        global_hooks.reallocate = realloc;
+        global_hooks.allocate = pvPortMalloc;
+        global_hooks.deallocate = vPortFree;
         return;
     }
 
-    global_hooks.allocate = malloc;
+    global_hooks.allocate = pvPortMalloc;
     if (hooks->malloc_fn != NULL)
     {
         global_hooks.allocate = hooks->malloc_fn;
     }
 
-    global_hooks.deallocate = free;
+    global_hooks.deallocate = vPortFree;
     if (hooks->free_fn != NULL)
     {
         global_hooks.deallocate = hooks->free_fn;
-    }
-
-    /* use realloc only if both free and malloc are used */
-    global_hooks.reallocate = NULL;
-    if ((global_hooks.allocate == malloc) && (global_hooks.deallocate == free))
-    {
-        global_hooks.reallocate = realloc;
     }
 }
 
@@ -428,37 +403,22 @@ static unsigned char* ensure(printbuffer * const p, size_t needed)
         newsize = needed * 2;
     }
 
-    if (p->hooks.reallocate != NULL)
-    {
-        /* reallocate with realloc if available */
-        newbuffer = (unsigned char*)p->hooks.reallocate(p->buffer, newsize);
-        if (newbuffer == NULL)
-        {
-            p->hooks.deallocate(p->buffer);
-            p->length = 0;
-            p->buffer = NULL;
+		/* otherwise reallocate manually */
+		newbuffer = (unsigned char*)p->hooks.allocate(newsize);
+		if (!newbuffer)
+		{
+				p->hooks.deallocate(p->buffer);
+				p->length = 0;
+				p->buffer = NULL;
 
-            return NULL;
-        }
-    }
-    else
-    {
-        /* otherwise reallocate manually */
-        newbuffer = (unsigned char*)p->hooks.allocate(newsize);
-        if (!newbuffer)
-        {
-            p->hooks.deallocate(p->buffer);
-            p->length = 0;
-            p->buffer = NULL;
-
-            return NULL;
-        }
-        if (newbuffer)
-        {
-            memcpy(newbuffer, p->buffer, p->offset + 1);
-        }
-        p->hooks.deallocate(p->buffer);
-    }
+				return NULL;
+		}
+		if (newbuffer)
+		{
+				memcpy(newbuffer, p->buffer, p->offset + 1);
+		}
+		p->hooks.deallocate(p->buffer);
+				
     p->length = newsize;
     p->buffer = newbuffer;
 
@@ -1007,7 +967,7 @@ static parse_buffer *skip_utf8_bom(parse_buffer * const buffer)
 /* Parse an object - create a new root, and populate. */
 CJSON_PUBLIC(cJSON *) cJSON_ParseWithOpts(const char *value, const char **return_parse_end, cJSON_bool require_null_terminated)
 {
-    parse_buffer buffer = { 0, 0, 0, 0, { 0, 0, 0 } };
+    parse_buffer buffer = { 0, 0, 0, 0, { 0, 0} };
     cJSON *item = NULL;
 
     /* reset error position */
@@ -1117,28 +1077,16 @@ static unsigned char *print(const cJSON * const item, cJSON_bool format, const i
     }
     update_offset(buffer);
 
-    /* check if reallocate is available */
-    if (hooks->reallocate != NULL)
-    {
-        printed = (unsigned char*) hooks->reallocate(buffer->buffer, buffer->offset + 1);
-        buffer->buffer = NULL;
-        if (printed == NULL) {
-            goto fail;
-        }
-    }
-    else /* otherwise copy the JSON over to a new buffer */
-    {
-        printed = (unsigned char*) hooks->allocate(buffer->offset + 1);
-        if (printed == NULL)
-        {
-            goto fail;
-        }
-        memcpy(printed, buffer->buffer, cjson_min(buffer->length, buffer->offset + 1));
-        printed[buffer->offset] = '\0'; /* just to be sure */
+		printed = (unsigned char*) hooks->allocate(buffer->offset + 1);
+		if (printed == NULL)
+		{
+				goto fail;
+		}
+		memcpy(printed, buffer->buffer, cjson_min(buffer->length, buffer->offset + 1));
+		printed[buffer->offset] = '\0'; /* just to be sure */
 
-        /* free the buffer */
-        hooks->deallocate(buffer->buffer);
-    }
+		/* free the buffer */
+		hooks->deallocate(buffer->buffer);
 
     return printed;
 
@@ -1169,7 +1117,7 @@ CJSON_PUBLIC(char *) cJSON_PrintUnformatted(const cJSON *item)
 
 CJSON_PUBLIC(char *) cJSON_PrintBuffered(const cJSON *item, int prebuffer, cJSON_bool fmt)
 {
-    printbuffer p = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
+    printbuffer p = { 0, 0, 0, 0, 0, 0, { 0, 0 } };
 
     if (prebuffer < 0)
     {
@@ -1199,7 +1147,7 @@ CJSON_PUBLIC(char *) cJSON_PrintBuffered(const cJSON *item, int prebuffer, cJSON
 
 CJSON_PUBLIC(cJSON_bool) cJSON_PrintPreallocated(cJSON *item, char *buf, const int len, const cJSON_bool fmt)
 {
-    printbuffer p = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
+    printbuffer p = { 0, 0, 0, 0, 0, 0, { 0, 0 } };
 
     if ((len < 0) || (buf == NULL))
     {

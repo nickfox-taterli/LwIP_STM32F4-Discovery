@@ -54,7 +54,7 @@ __initial_sp
 ;   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
 
-Heap_Size      EQU     0xC00
+Heap_Size      EQU     0x0
 ;用了操作系统这个就没所谓的,他就是malloc用的内存.
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
